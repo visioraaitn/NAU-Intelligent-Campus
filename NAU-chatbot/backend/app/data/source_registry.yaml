@@ -1,0 +1,94 @@
+version: 1
+sources:
+  PROJECT_INSTITUTIONAL_RULES:
+    title: Institutional rules supplied for this project
+    type: PROJECT_POLICY
+    description: >-
+      Authoritative project-level corrections supplied by IIT for the current
+      catalogue. These rules override conflicting legacy rows in the SQL dump.
+  SRC_IIT_MAIN:
+    title: Contacts publics IIT Sfax
+    type: WEB_PAGE
+    url: https://iit.tn/
+    description: Portail institutionnel et contacts publics de l'IIT Sfax.
+  SRC_IIT_ADMISSION:
+    title: Procédure d'admission et préinscription
+    type: WEB_PAGE
+    url: https://iit.tn/admission/procedure-et-frais-dinscription/
+    description: Procédure publique d'admission et préinscription aux filières d'ingénierie.
+  SRC_LICENCE_GLSI:
+    title: Licence Génie Logiciel et Systèmes d'Information
+    type: WEB_PAGE
+    url: https://iit.tn/licence-genie-logiciel-et-systheme-dinformation/
+    description: Page historique de présentation de la Licence GLSI.
+  SRC_PLAN_LICENCE_GLSI:
+    title: Plan d'Études Licence Informatique
+    type: PDF
+    url: https://iit.tn/wp-content/uploads/2025/08/Plan_EtudeLicence-Info-1.pdf
+    description: Plan d'études public de la Licence Informatique.
+  SRC_PREPA:
+    title: Cycle Préparatoire aux Études d'Ingénieurs
+    type: WEB_PAGE
+    url: https://iit.tn/prepa/
+    description: Page publique du Cycle Préparatoire IIT.
+  SRC_GENIE_INFO:
+    title: Cycle Génie Informatique (GLID & ARSI)
+    type: WEB_PAGE
+    url: https://iit.tn/filieres-ingenieur/genie-informatique-2/
+    description: Page publique historique du Cycle Ingénieur Génie Informatique.
+  SRC_GUIDE_ETUDIANT:
+    title: Guide des Étudiants IIT
+    type: PDF
+    url: https://iit.tn/wp-content/uploads/2024/04/Guide-des-Etudiants-version-finale-FOR-WEB.pdf
+    description: Guide étudiant public IIT précisant les durées des cycles.
+  SRC_ACCREDITATIONS:
+    title: Accréditations et Labels IIT
+    type: WEB_PAGE
+    url: https://iit.tn/a-propos/accreditations/
+    description: Page publique des accréditations officielles IIT.
+  FLYER_GENIE_INFO:
+    title: Flyer Génie Informatique
+    type: FLYER
+    artifact: c13241da-b36d-4fb1-bd1d-b3747ca3421b.jpg
+    description: Flyer officiel fourni par l'utilisateur.
+  FLYER_ARCHITECTURE:
+    title: Flyer Diplôme National d'Architecture
+    type: FLYER
+    artifact: f65ce9a0-5b3d-4992-815d-2f9bff043b5b.jpg
+    description: Flyer officiel fourni par l'utilisateur.
+  FLYER_LICENCE_MECATRONIQUE:
+    title: Flyer Licence Mécatronique et Systèmes Intelligents
+    type: FLYER
+    artifact: 2d0af83a-bf70-4a29-8453-c0d5b2f54b8a.jpg
+    description: Flyer officiel fourni par l'utilisateur.
+  FLYER_LICENCE_ELECTRIQUE:
+    title: Flyer Licence Systèmes Électriques Intelligents et Énergies Renouvelables
+    type: FLYER
+    artifact: 1f9454f0-5c74-4c5d-b442-3b5f373a845b.jpg
+    description: Flyer officiel fourni par l'utilisateur.
+  FLYER_GENIE_MECANIQUE:
+    title: Flyer Génie Mécanique
+    type: FLYER
+    artifact: 7743f274-6c4b-475c-ac3e-31f3112bf9bd.jpg
+    description: Flyer officiel fourni par l'utilisateur.
+  FLYER_GENIE_PROCEDES:
+    title: Flyer Génie des Procédés
+    type: FLYER
+    artifact: d8e262c1-24db-4494-a748-9dc036d0f198.jpg
+    related_artifact: 66b76f59-4bce-4c74-9d5d-e6c03fd2f877.jpg
+    description: Les deux vues fournies documentent une seule formation.
+  FLYER_GENIE_CIVIL:
+    title: Flyer Génie Civil
+    type: FLYER
+    artifact: e79c4c04-89ce-443e-a8f2-ffd52fc73aca.jpg
+    description: Flyer officiel fourni par l'utilisateur.
+  FLYER_GENIE_INDUSTRIEL:
+    title: Flyer Génie Industriel
+    type: FLYER
+    artifact: 5b3c7556-46af-45a9-9008-1be666cf395b.jpg
+    description: Flyer officiel fourni par l'utilisateur.
+  FLYER_LICENCE_INFO:
+    title: Flyer Licence en Informatique
+    type: FLYER
+    artifact: ce3aed7e-4883-438b-a9a5-ed354d8192db.jpg
+    description: Flyer officiel fourni par l'utilisateur.

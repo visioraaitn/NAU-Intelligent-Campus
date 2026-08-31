@@ -1,0 +1,40 @@
+esprit:
+  provider: huggingface
+  model_id: ESPRIT-Group/ESPRIT-Derja-Qwen3-8B-v2
+  local_path: ""
+  quantization: 4bit
+  device: auto
+  role: tunisian_nlu
+  max_concurrency: 1
+  trust_remote_code: false
+  local_files_only: true
+final:
+  provider: huggingface
+  model_id: Qwen/Qwen3-4B-Instruct-2507
+  local_path: ""
+  quantization: 4bit
+  device: auto
+  role: final_generation
+  max_concurrency: 1
+  trust_remote_code: false
+  local_files_only: true
+embedding:
+  provider: huggingface
+  model_id: intfloat/multilingual-e5-base
+  local_path: ""
+  quantization: none
+  device: cpu
+  role: embedding
+  max_concurrency: 4
+  trust_remote_code: false
+  local_files_only: true
+reranker:
+  provider: huggingface
+  model_id: cross-encoder/mmarco-mMiniLMv2-L12-H384-v1
+  local_path: ""
+  quantization: none
+  device: cpu
+  role: reranker
+  max_concurrency: 2
+  trust_remote_code: false
+  local_files_only: true

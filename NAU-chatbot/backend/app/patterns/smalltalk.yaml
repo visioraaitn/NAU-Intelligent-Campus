@@ -1,0 +1,7 @@
+patterns:
+  smalltalk:
+    - '^(waa+|waw+|yo+|hey+)$'
+    - '^seyes( alina)?( sa7bi| sahbi)?$'
+    - '^bara chwaya$'
+terms:
+  academic_hints: [bac, licence, licrnce, license, master, mastère, mastere, prepa, prépa, ingénieur, ingenieur, ingénierie, ingenierie, génie, genie, info, informatique, cyber, cybersécurité, reseau, réseau, data, ia, iot, glid, arsi, sdia, mp, math, maths, science, sciences, technique, eco, économie, economie, gestion, sport, frais, prix, coût, cout, durée, duree, inscription, métier, metier, programme, tansahni, chtansahni, chtnsahni]

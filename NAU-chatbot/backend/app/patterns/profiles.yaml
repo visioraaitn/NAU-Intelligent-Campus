@@ -1,0 +1,47 @@
+patterns:
+  hypothetical:
+    - '\b(ken jit|si j avais|si j''avais|supposons|imaginons|dans le cas ou)\b'
+  friend:
+    - '\b(mon ami|ma copine|mon copain|sa7bi|sahbi|s7abi)\b'
+  family:
+    - '\b(mon frere|ma soeur|mon fils|ma fille|pour mon fils|pour ma fille|benti|khouya|okhti)\b'
+    - '(?<!ya )\bweldi\b'
+  self:
+    - '\b(moi|pour moi|ena|je suis|j ai|j''ai|i have|i am)\b'
+  master:
+    - '\b(master|mast[eè]re)\b'
+  licence:
+    - '\b(licence|licenci[eé])\b'
+  prepa:
+    - '\b(pr[eé]pa|preparatoire|préparatoire)\b'
+  bac:
+    - '\bbac(calaur[eé]at)?\b'
+  licence_holder:
+    - '\b(j''ai|j ai|ena|andi|3andi).*(licence|licenci[eé])\b'
+    - '\b(i have|i hold).*(licence|license|bachelor)\b'
+  licence_student:
+    - '\b(en licence|na9ra licence|étudiant en licence|etudiant en licence)\b'
+  prepa_holder:
+    - '\b(j''ai fini|j ai fini|dipl[oô]m[eé]|termin[eé]).*(pr[eé]pa|preparatoire)\b'
+  prepa_student:
+    - '\b(en pr[eé]pa|na9ra prepa|étudiant en prépa|etudiant en prepa)\b'
+  average:
+    - '\b(?:moyenne|moy|score)\s*(?:de|=|:)?\s*(?P<value>\d{1,2}(?:[.,]\d+)?)\b'
+  math_grade:
+    - '\b(?:math|maths|mathematiques|mathématiques)\s*(?:de|=|:)?\s*(?P<value>\d{1,2}(?:[.,]\d+)?)\b'
+  licence_specialty:
+    - '\blicence(?:\s+en)?\s+(?P<value>[a-z0-9 éèêàâîïôûç''-]{2,80})'
+  finishing:
+    - '\b(je termine|je finis|derniere annee|dernière année|bientot diplome|bientôt diplômé)\b'
+  correction:
+    - '\b(en fait|correction|je me suis trompe|je me suis trompé|non je suis)\b'
+  pending_bac_level:
+    - '^\s*(?P<average>\d{1,2}(?:[.,]\d+)?)\s*(?:w|et|,)\s*(?P<math>\d{1,2}(?:[.,]\d+)?)\s*$'
+terms:
+  capture_stop: [ena, je suis, j ai, je veux, je souhaite, i am, i have, nheb, na9ra, bech, bich, pour, afin, et, nkamel, tansahni, tensahni]
+  bac_math: [bac math, mathématiques, mathematiques]
+  bac_sciences: [bac sciences, sciences expérimentales, sciences experimentales]
+  bac_info: [bac info, bac informatique]
+  bac_technique: [bac technique, technique]
+  bac_eco: [bac eco, economie, économie, gestion]
+  bac_sport: [bac sport, sport]

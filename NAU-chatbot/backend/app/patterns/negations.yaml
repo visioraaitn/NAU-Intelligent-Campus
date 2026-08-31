@@ -1,0 +1,10 @@
+patterns:
+  negation:
+    - '\b(manich|ma nhebch|manhebech|mouch|non|pas|ma3ejbetnich|khrahtou)\b'
+  reject_info:
+    - '\b(ma nhebch|manhebech|je ne veux pas|j aime pas|je n aime pas).*\b(info|informatique)\b'
+  reject_offer:
+    - '\b(ma3ejbetnich|je n aime pas|j aime pas|ma nhebch|pas).*\b(glid|arsi|sdia|glsi|prepa|prépa)\b'
+terms:
+  offers: [GLID, ARSI, SDIA, GLSI, PREPA]
+

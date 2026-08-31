@@ -1,0 +1,11 @@
+patterns:
+  greeting:
+    - '^(slt|slm|cc|salem|selem|slem|salam|3aslema|aslema|asslema|ahla|ahlan|bonjour|bonsoir|salut|hello|hi|coucou)([ !?.,]*)$'
+  how_are_you:
+    - '^(chhalek|chneya ahwelek|kifech el omour|labes|lebes|ca va|cv|comment ca va|comment vas tu)([ !?.,]*)$'
+  thanks:
+    - '^(merci|3aychik|aaychek|aychek|chokran|shukran|thanks)( beaucoup)?([ !?.,]*)$'
+  goodbye:
+    - '^(bislema|beslema|bslama|bye|goodbye|au revoir|a bientot|bonne nuit)([ !?.,]*)$'
+  reset:
+    - '^(reset|recommence|nouvelle conversation|on recommence|new conversation)([ !?.,]*)$'

@@ -1,0 +1,4 @@
+name: IIT Academic Assistant
+api_prefix: /api/v1
+default_language: fr
+

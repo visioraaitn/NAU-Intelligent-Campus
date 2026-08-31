@@ -1,0 +1,484 @@
+version: 1
+dataset:
+  name: IIT active academic catalogue
+  source: iit_academic_db.sql
+  notes: >-
+    Active final seven-table projection of the supplied SQL, with explicit
+    institutional corrections taking precedence over conflicting legacy data.
+
+parcours:
+  - {code: PREPA, nom: "Cycle Préparatoire", duree_annees: 2, description: "Cycle Préparatoire aux études d'ingénieurs", actif: true}
+  - {code: LICENCE, nom: Licence, duree_annees: 3, description: "Cycle Licence", actif: true}
+  - {code: INGENIEUR, nom: "Cycle Ingénieur", duree_annees: 3, description: "Cycle Ingénieur", actif: true}
+  - {code: ARCHITECTURE, nom: Architecture, duree_annees: 6, description: "Parcours du Diplôme National d'Architecte", actif: true}
+
+formations:
+  - code: PREPA_GENERAL
+    parcours_code: PREPA
+    nom: "Cycle Préparatoire"
+    intitule_diplome: null
+    duree_annees: 2
+    nb_semestres: null
+    credits_total: null
+    langues_enseignement: [FRANCAIS]
+    description: "Cycle Préparatoire général"
+    source_ref: SRC_PREPA
+    actif: true
+  - {code: LICENCE_INFO, parcours_code: LICENCE, nom: "Licence en Informatique", intitule_diplome: "Licence en Informatique", duree_annees: 3, nb_semestres: 6, credits_total: null, langues_enseignement: [FRANCAIS, ANGLAIS], description: null, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {code: LICENCE_MECATRONIQUE_SI, parcours_code: LICENCE, nom: "Mécatronique & Systèmes Intelligents", intitule_diplome: "Licence Nationale en Mécatronique & Systèmes Intelligents", duree_annees: 3, nb_semestres: 6, credits_total: null, langues_enseignement: [FRANCAIS, ANGLAIS], description: null, source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {code: LICENCE_ELEC_SEIER, parcours_code: LICENCE, nom: "Systèmes Électriques Intelligents & Énergies Renouvelables", intitule_diplome: "Licence en Génie Électrique", duree_annees: 3, nb_semestres: 6, credits_total: null, langues_enseignement: [FRANCAIS, ANGLAIS], description: null, source_ref: FLYER_LICENCE_ELECTRIQUE, actif: true}
+  - {code: INGENIEUR_INFO, parcours_code: INGENIEUR, nom: "Génie Informatique", intitule_diplome: null, duree_annees: 3, nb_semestres: null, credits_total: null, langues_enseignement: [FRANCAIS], description: null, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {code: INGENIEUR_CIVIL, parcours_code: INGENIEUR, nom: "Génie Civil", intitule_diplome: "Diplôme National d'Ingénieur en Génie Civil", duree_annees: 3, nb_semestres: null, credits_total: 180, langues_enseignement: [FRANCAIS], description: null, source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {code: INGENIEUR_INDUSTRIEL, parcours_code: INGENIEUR, nom: "Génie Industriel", intitule_diplome: "Diplôme National d'Ingénieur en Génie Industriel", duree_annees: 3, nb_semestres: null, credits_total: 180, langues_enseignement: [FRANCAIS], description: null, source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {code: INGENIEUR_MECANIQUE, parcours_code: INGENIEUR, nom: "Génie Mécanique", intitule_diplome: "Diplôme National d'Ingénieur en Génie Mécanique", duree_annees: 3, nb_semestres: null, credits_total: 180, langues_enseignement: [FRANCAIS], description: null, source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {code: INGENIEUR_PROCEDES, parcours_code: INGENIEUR, nom: "Génie des Procédés", intitule_diplome: "Diplôme National d'Ingénieur en Génie des Procédés", duree_annees: 3, nb_semestres: null, credits_total: 180, langues_enseignement: [FRANCAIS], description: null, source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {code: ARCHITECTURE_DNA, parcours_code: ARCHITECTURE, nom: "Diplôme National d'Architecte", intitule_diplome: "Diplôme National d'Architecte", duree_annees: 6, nb_semestres: null, credits_total: null, langues_enseignement: [FRANCAIS], description: null, source_ref: FLYER_ARCHITECTURE, actif: true}
+
+specialisations:
+  - {formation_code: PREPA_GENERAL, code: MP, nom: "Mathématiques-Physique (MP)", description: "Spécialisation institutionnelle active du Cycle Préparatoire.", ordre_affichage: 1, source_ref: PROJECT_INSTITUTIONAL_RULES, actif: true}
+  - {formation_code: INGENIEUR_INFO, code: SDIA, nom: "Science des Données et Intelligence Artificielle", description: null, ordre_affichage: 1, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, code: ARSI, nom: "Administration Réseau et Sécurité Informatique", description: null, ordre_affichage: 2, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, code: GLID, nom: "Génie Logiciel et Informatique Décisionnelle", description: null, ordre_affichage: 3, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, code: LIC_INFO_BIG_DATA, nom: "Big Data & Analyse des Données", description: null, ordre_affichage: 1, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, code: LIC_INFO_GLSI, nom: "Génie Logiciel & Systèmes Intelligents", description: null, ordre_affichage: 2, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, code: LIC_INFO_CYBER, nom: "Cybersécurité et Réseaux", description: null, ordre_affichage: 3, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, code: LIC_INFO_IOT, nom: "Systèmes Embarqués & IoT", description: null, ordre_affichage: 4, source_ref: FLYER_LICENCE_INFO, actif: true}
+
+tarifs:
+  - code: TARIF_PREPA_GENERAL_INDICATIF
+    formation_code: PREPA_GENERAL
+    specialisation_code: null
+    frais_inscription: 800.00
+    mensualite: 556.00
+    nb_mensualites: 9
+    langue_enseignement: FRANCAIS
+    devise: TND
+    annee_universitaire: null
+    statut: INDICATIF
+    remarque: "La page publique affiche 556 DT par mois sur 9 mois pour la première année, à titre indicatif. Un droit d'inscription de 800 DT est indiqué pour les étudiants tunisiens."
+    source_ref: SRC_PREPA
+    actif: true
+  - code: TARIF_LICENCE_INFO_INDICATIF
+    formation_code: LICENCE_INFO
+    specialisation_code: null
+    frais_inscription: 800.00
+    mensualite: 667.00
+    nb_mensualites: 9
+    langue_enseignement: FRANCAIS
+    devise: TND
+    annee_universitaire: null
+    statut: INDICATIF
+    remarque: "La page publique affiche 667 DT par mois sur 9 mois pour la première année, à titre indicatif. Un droit d'inscription de 800 DT est indiqué pour les étudiants tunisiens."
+    source_ref: SRC_LICENCE_GLSI
+    actif: true
+  - code: TARIF_INGENIEUR_INFO_INDICATIF
+    formation_code: INGENIEUR_INFO
+    specialisation_code: null
+    frais_inscription: 800.00
+    mensualite: 778.00
+    nb_mensualites: 9
+    langue_enseignement: FRANCAIS
+    devise: TND
+    annee_universitaire: null
+    statut: INDICATIF
+    remarque: "La page publique affiche 778 DT par mois sur 9 mois pour la première année, à titre indicatif. Un droit d'inscription de 800 DT est indiqué pour les étudiants tunisiens."
+    source_ref: SRC_GENIE_INFO
+    actif: true
+
+orientation_rules:
+  - code: ADMISSION_LICENCE_GLSI
+    formation_code: LICENCE_INFO
+    specialisation_code: LIC_INFO_GLSI
+    nom: "Admission Licence Informatique — GLSI (historique)"
+    type_regle: ADMISSION
+    criteres: {diplome: BAC, type_bac: {in: [MATH, SCIENCES, INFORMATIQUE, TECHNIQUE]}}
+    description: "Règle historique remplacée par ADMISSION_LICENCE_INFO; conservée inactive pour la traçabilité."
+    priorite: 1
+    source_ref: SRC_LICENCE_GLSI
+    actif: false
+  - code: ADMISSION_PREPA
+    formation_code: PREPA_GENERAL
+    specialisation_code: null
+    nom: "Admission Cycle Préparatoire"
+    type_regle: ADMISSION
+    criteres: {diplome: BAC, type_bac: {in: [MATH, SCIENCES]}}
+    description: "Règle institutionnelle courante: seuls les bacs Math et Sciences sont acceptés pour le Cycle Préparatoire."
+    priorite: 1
+    source_ref: PROJECT_INSTITUTIONAL_RULES
+    actif: true
+  - code: ADMISSION_INGENIEUR_INFO
+    formation_code: INGENIEUR_INFO
+    specialisation_code: null
+    nom: "Admission Cycle Génie Informatique"
+    type_regle: ADMISSION
+    criteres: {diplome: {in: [PREPA, LICENCE, MASTER]}}
+    description: "La page publique du Génie Informatique indique comme prérequis: Prépa, Licence ou Mastère."
+    priorite: 1
+    source_ref: SRC_GENIE_INFO
+    actif: true
+  - code: RECOMMANDATION_GLID
+    formation_code: INGENIEUR_INFO
+    specialisation_code: GLID
+    nom: "Recommandation Orientation GLID"
+    type_regle: RECOMMANDATION
+    criteres: {interet: {in: [SOFTWARE, DATA_AI]}}
+    description: "GLID est davantage aligné avec logiciel, Data, IA et Cloud qu'avec réseaux/cybersécurité."
+    priorite: 2
+    source_ref: SRC_GENIE_INFO
+    actif: true
+  - code: RECOMMANDATION_ARSI
+    formation_code: INGENIEUR_INFO
+    specialisation_code: ARSI
+    nom: "Recommandation Orientation ARSI"
+    type_regle: RECOMMANDATION
+    criteres: {interet: {in: [CYBER_NETWORKS]}}
+    description: "ARSI est davantage aligné avec réseaux, systèmes et cybersécurité qu'avec Data/IA."
+    priorite: 2
+    source_ref: SRC_GENIE_INFO
+    actif: true
+  - code: RECOMMANDATION_SDIA
+    formation_code: INGENIEUR_INFO
+    specialisation_code: SDIA
+    nom: "Recommandation Orientation SDIA"
+    type_regle: RECOMMANDATION
+    criteres: {interet: {in: [DATA_AI]}}
+    description: "L'intitulé officiel Science des Données et Intelligence Artificielle permet d'orienter un intérêt Data/IA vers SDIA; aucun contenu de programme supplémentaire n'est déduit."
+    priorite: 2
+    source_ref: FLYER_GENIE_INFO
+    actif: true
+  - code: ADMISSION_LICENCE_INFO
+    formation_code: LICENCE_INFO
+    specialisation_code: null
+    nom: "Admission Licence Informatique"
+    type_regle: ADMISSION
+    criteres: {diplome: BAC, type_bac: {in: [SCIENTIFIQUE, ECONOMIQUE, TECHNIQUE]}}
+    description: "Baccalauréat : toutes sections scientifiques, économiques et techniques."
+    priorite: 1
+    source_ref: FLYER_LICENCE_INFO
+    actif: true
+  - code: ADMISSION_LICENCE_MECATRONIQUE
+    formation_code: LICENCE_MECATRONIQUE_SI
+    specialisation_code: null
+    nom: "Admission Licence Mécatronique"
+    type_regle: ADMISSION
+    criteres: {type_bac: {in: [MATH, SCIENCES_EXPERIMENTALES, INFORMATIQUE, TECHNIQUE, EQUIVALENT]}}
+    description: "Bac Math, Sciences expérimentales, Informatique, Technique ou équivalent."
+    priorite: 1
+    source_ref: FLYER_LICENCE_MECATRONIQUE
+    actif: true
+  - code: ADMISSION_INGENIEUR_CIVIL
+    formation_code: INGENIEUR_CIVIL
+    specialisation_code: null
+    nom: "Admission Génie Civil"
+    type_regle: ADMISSION
+    criteres: {diplome: {in: [LICENCE, MASTER, PREPA]}}
+    description: "Licence, Mastère ou Préparatoire."
+    priorite: 1
+    source_ref: FLYER_GENIE_CIVIL
+    actif: true
+  - code: ADMISSION_INGENIEUR_MECANIQUE
+    formation_code: INGENIEUR_MECANIQUE
+    specialisation_code: null
+    nom: "Admission Génie Mécanique"
+    type_regle: ADMISSION
+    criteres: {diplome: {in: [LICENCE, MASTER, PREPA]}}
+    description: "Licence, Mastère ou Préparatoire."
+    priorite: 1
+    source_ref: FLYER_GENIE_MECANIQUE
+    actif: true
+  - code: ADMISSION_INGENIEUR_PROCEDES
+    formation_code: INGENIEUR_PROCEDES
+    specialisation_code: null
+    nom: "Admission Génie des Procédés"
+    type_regle: ADMISSION
+    criteres: {diplome: {in: [LICENCE, MASTER, PREPA]}}
+    description: "Licence, Mastère ou Préparatoire."
+    priorite: 1
+    source_ref: FLYER_GENIE_PROCEDES
+    actif: true
+  - code: ADMISSION_INGENIEUR_INDUSTRIEL
+    formation_code: INGENIEUR_INDUSTRIEL
+    specialisation_code: null
+    nom: "Admission Génie Industriel"
+    type_regle: ADMISSION
+    criteres:
+      diplome_origine:
+        in: [LICENCE_MAINTENANCE_INDUSTRIELLE, LICENCE_MATHEMATIQUE, MATHEMATIQUE_APPLIQUEE, LOGISTIQUE_INDUSTRIELLE, PHYSIQUE_QUALITE, PHYSIQUE_CHIMIE]
+    description: "Licence maintenance industrielle; Licence en Mathématique; Mathématique Appliquée; Logistique industrielle; Physique et Qualité; Physique-Chimie."
+    priorite: 1
+    source_ref: FLYER_GENIE_INDUSTRIEL
+    actif: true
+
+accreditations:
+  - code: EURO-INF
+    formation_code: INGENIEUR_INFO
+    nom: EURO-INF
+    organisme: ASIIN
+    description: "Le Génie Informatique IIT porte le label EURO-INF attribué par ASIIN selon les pages publiques IIT. Il s'agit d'une accréditation de programme international."
+    date_debut: null
+    date_fin: null
+    source_ref: SRC_ACCREDITATIONS
+    actif: true
+
+formation_elements:
+  # Génie des Procédés — compétences, métiers et domaines du flyer.
+  - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_SIM, nom: "Simulation de procédés (Aspen HYSYS, CFD, REVIT…)", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_TRANSFERT, nom: "Phénomènes de transfert et opérations unitaires", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_OPT, nom: "Contrôle et optimisation des procédés", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_QHSE, nom: "Sécurité, QHSE et environnement", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_FUTUR, nom: "Énergies du futur et développement durable", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_ACV, nom: "Bilan carbone, décarbonation industrielle et analyse du cycle de vie (ACV)", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: PROC_M_PROD, nom: "Ingénieur de production", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: PROC_M_PROC, nom: "Ingénieur procédés", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_QHSE, nom: "Responsable QHSE", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_BUREAU, nom: "Responsable bureau d'études", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_CHEF_PROJET_IND, nom: "Chef de projet industriel", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_RD, nom: "Ingénieur R&D", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_TECH_COM, nom: "Ingénieur technico-commercial", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_BILAN_C, nom: "Ingénieur bilan carbone", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_TRANSITION, nom: "Consultant transition énergétique & climat", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: METIER, code: M_ACV, nom: "Ingénieur ACV & performance environnementale", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_PETROLE, nom: "Pétrole & Gaz", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_ENERGIE, nom: "Énergie & Réseaux", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_ENR, nom: "Énergies renouvelables", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_BUREAUX, nom: "Bureaux d'études & Ingénierie", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_CONSEIL, nom: "Sociétés de conseil & expertises", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_BIOTECH, nom: "Biotechnologies & Agro/Biotech", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_RD, nom: "Recherche & Développement", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: DOMAINE_ACTIVITE, code: D_CLIMAT, nom: "Bilan carbone & stratégie climat", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+
+  # Génie Civil.
+  - {formation_code: INGENIEUR_CIVIL, type_element: COMPETENCE, code: CIV_STRUCT, nom: "Conception et dimensionnement des structures", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: COMPETENCE, code: CIV_GEO, nom: "Études géotechniques et infrastructures", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: COMPETENCE, code: CIV_BETON, nom: "Béton et management des projets de construction", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: COMPETENCE, code: CIV_CAO, nom: "Modélisation et calcul assisté par ordinateur", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: COMPETENCE, code: CIV_QUAL, nom: "Contrôle qualité et expertise des matériaux", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: COMPETENCE, code: CIV_BIM, nom: "Maîtrise du BIM et des outils numériques de conception", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: METIER, code: CIV_M_ING, nom: "Ingénieur en Génie Civil", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: METIER, code: CIV_M_STRUCT, nom: "Ingénieur structures et géotechnique", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: METIER, code: CIV_M_TRAVAUX, nom: "Conducteur de travaux / Chef de chantier", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: METIER, code: CIV_M_AFFAIRES, nom: "Chargé d'affaires construction et BTP", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: METIER, code: CIV_M_HYDRAU, nom: "Ingénieur hydraulique", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: METIER, code: CIV_M_BIM, nom: "BIM Manager", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: DOMAINE_ACTIVITE, code: CIV_D_BAT, nom: "Bâtiments et ouvrages d'art", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: DOMAINE_ACTIVITE, code: CIV_D_VRD, nom: "Routes, infrastructures et VRD", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: DOMAINE_ACTIVITE, code: CIV_D_GEO, nom: "Géotechnique et fondations", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: DOMAINE_ACTIVITE, code: CIV_D_HYDRAU, nom: "Ouvrages hydrauliques et maritimes", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: DOMAINE_ACTIVITE, code: CIV_D_LABO, nom: "Laboratoires de contrôle qualité des matériaux", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: DOMAINE_ACTIVITE, code: CIV_D_ENTREPRISE, nom: "Bureaux d'études et entreprises de construction", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: DOMAINE_ACTIVITE, code: CIV_D_PUBLIC, nom: "Collectivités et institutions publiques", source_ref: FLYER_GENIE_CIVIL, actif: true}
+
+  # Génie Mécanique.
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_CAO, nom: "Conception mécanique assistée par ordinateur avec SolidWorks / CATIA", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_STRUCT, nom: "Dimensionnement et calcul des structures mécaniques", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_FAB, nom: "Fabrication et procédés industriels", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_MAINT, nom: "Maintenance et fiabilité des systèmes industriels", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_AUTO, nom: "Automatisation et mécatronique", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_ENR, nom: "Énergies renouvelables et efficacité énergétique", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_SIM, nom: "Simulation numérique", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: COMPETENCE, code: MEC_PROJET, nom: "Gestion de projets industriels et innovation", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: METIER, code: MEC_M_CONCEPTION, nom: "Ingénieur conception mécanique", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: METIER, code: MEC_M_METHODES, nom: "Ingénieur méthodes", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: METIER, code: MEC_M_PRODUCTION, nom: "Ingénieur production", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: METIER, code: MEC_M_INDUSTRIALISATION, nom: "Ingénieur industrialisation", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: METIER, code: MEC_M_MAINTENANCE, nom: "Ingénieur maintenance", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: METIER, code: MEC_M_PROJET, nom: "Chef de projet industriel", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_AERO, nom: "Aéronautique et spatial", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_AUTO, nom: "Automobile et transport", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_ENERGIE, nom: "Énergies et génie énergétique", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_GENERAL, nom: "Mécanique générale", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_BTP, nom: "Bâtiment et travaux publics", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_CHIMIE, nom: "Industrie chimique et pharmaceutique", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_RD, nom: "Recherche et développement", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: DOMAINE_ACTIVITE, code: MEC_D_IND40, nom: "Industrie 4.0 et digitalisation", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+
+  # Génie Industriel.
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_AUTO, nom: "Automatisation & Informatique industrielle", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_MECA, nom: "Mécanique & Électronique", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_PY, nom: "Programmation Python", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_CLOUD, nom: "Maintenance prédictive & Cloud manufacturing", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_AI, nom: "Big Data, IoT & IA appliquée", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_CAO, nom: "Conception CAO SolidWorks", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_PLAN, nom: "Planification & Organisation", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_QUAL, nom: "Contrôle Qualité", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_GEST, nom: "Gestion & Économie", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_BI, nom: "Business Intelligence & Odoo ERP", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_SC, nom: "Supply Chain & Automated VSM", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_SOFT, nom: "Préparation à la carrière & Soft Skill", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: COMPETENCE, code: IND_ERP, nom: "ERP Odoo-SAP", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: METIER, code: IND_RESP_PROD, nom: "Responsable Production", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: METIER, code: IND_SC_METIER, nom: "Ingénieur Supply Chain", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: METIER, code: IND_SI_METIER, nom: "Ingénieur Systèmes d'Information", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: METIER, code: IND_MAINT_METIER, nom: "Ingénieur Maintenance", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: METIER, code: IND_DATA_METIER, nom: "Data Analyst industriel", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: METIER, code: IND_40_METIER, nom: "Consultant Industrie 4.0", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: METIER, code: M_QHSE, nom: "Responsable QHSE", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: DOMAINE_ACTIVITE, code: IND_D_MECA, nom: "Mécanique & Automobile", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: DOMAINE_ACTIVITE, code: IND_D_PHARMA, nom: "Pharmaceutique & Agroalimentaire", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: DOMAINE_ACTIVITE, code: IND_D_INFO, nom: "Informatique & Numérique", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: DOMAINE_ACTIVITE, code: IND_D_LOG, nom: "Logistique & Transport", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: DOMAINE_ACTIVITE, code: IND_D_BANK, nom: "Banque & Services", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: DOMAINE_ACTIVITE, code: IND_D_SANTE, nom: "Santé, Hôpitaux et cliniques", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: DOMAINE_ACTIVITE, code: IND_D_BE, nom: "Bureaux d'étude", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+
+  # Architecture.
+  - {formation_code: ARCHITECTURE_DNA, type_element: COMPETENCE, code: ARCH_PROJET, nom: "Développement de projets architecturaux innovants, esthétiques et durables", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: COMPETENCE, code: ARCH_OUTILS, nom: "Outils numériques", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: COMPETENCE, code: ARCH_BIM, nom: "BIM / AutoCAD / Revit", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: COMPETENCE, code: ARCH_BIO, nom: "Architecture bioclimatique / développement durable", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: COMPETENCE, code: ARCH_IA, nom: "IA dans la conception et communication architecturale", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: METIER, code: ARCH_CONCEPTEUR, nom: "Architecte concepteur", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: METIER, code: ARCH_PAYSAGISTE, nom: "Architecte paysagiste", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: METIER, code: ARCH_BIM_MGR, nom: "BIM Manager", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: METIER, code: ARCH_URBANISTE, nom: "Architecte urbaniste", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: METIER, code: ARCH_CHEF, nom: "Chef de projet", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: DOMAINE_ACTIVITE, code: ARCH_D_HABITAT, nom: "Habitat et architecture", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: DOMAINE_ACTIVITE, code: ARCH_D_ETUDES, nom: "Bureaux d'études et de conseils", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: DOMAINE_ACTIVITE, code: ARCH_D_IMMO, nom: "Innovation immobilière et promotion architecturale", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: DOMAINE_ACTIVITE, code: ARCH_D_URBA, nom: "Urbanisme et aménagement du territoire", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: DOMAINE_ACTIVITE, code: ARCH_D_PATRIMOINE, nom: "Patrimoine, rénovation et conservation", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: DOMAINE_ACTIVITE, code: ARCH_D_DESIGN, nom: "Design intérieur et scénographie", source_ref: FLYER_ARCHITECTURE, actif: true}
+
+  # Licences Mécatronique et Génie Électrique.
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: COMPETENCE, code: LMS_CONCEPTION, nom: "Conception de systèmes mécatroniques", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: COMPETENCE, code: LMS_IOT, nom: "IoT et systèmes embarqués", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: COMPETENCE, code: LMS_INTELLIGENT, nom: "Systèmes intelligents", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: COMPETENCE, code: LMS_VISION, nom: "IA et vision", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: COMPETENCE, code: LMS_AUTO, nom: "Automatisation", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: DOMAINE_ACTIVITE, code: LMS_D_AERO, nom: "Aéronautique", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: DOMAINE_ACTIVITE, code: LMS_D_AUTO, nom: "Automobile", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: DOMAINE_ACTIVITE, code: LMS_D_MOBILITY, nom: "Smart Mobility", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: DOMAINE_ACTIVITE, code: LMS_D_ROBOT, nom: "Robotique", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: DOMAINE_ACTIVITE, code: LMS_D_ENERGY, nom: "Énergie et environnement", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_MECATRONIQUE_SI, type_element: DOMAINE_ACTIVITE, code: LMS_D_IND40, nom: "Industrie 4.0", source_ref: FLYER_LICENCE_MECATRONIQUE, actif: true}
+  - {formation_code: LICENCE_ELEC_SEIER, type_element: COMPETENCE, code: ELEC_CONCEPTION, nom: "Conception et gestion des systèmes électriques intelligents", source_ref: FLYER_LICENCE_ELECTRIQUE, actif: true}
+  - {formation_code: LICENCE_ELEC_SEIER, type_element: COMPETENCE, code: ELEC_ENR, nom: "Intégration des énergies renouvelables et Smart Grids", source_ref: FLYER_LICENCE_ELECTRIQUE, actif: true}
+  - {formation_code: LICENCE_ELEC_SEIER, type_element: COMPETENCE, code: ELEC_AUTO, nom: "Programmation, automatisme et contrôle des systèmes", source_ref: FLYER_LICENCE_ELECTRIQUE, actif: true}
+  - {formation_code: LICENCE_ELEC_SEIER, type_element: COMPETENCE, code: ELEC_DATA, nom: "Analyse de données, IA et IoT appliqués à l'énergie", source_ref: FLYER_LICENCE_ELECTRIQUE, actif: true}
+  - {formation_code: LICENCE_ELEC_SEIER, type_element: COMPETENCE, code: ELEC_PROJET, nom: "Gestion de projets, sécurité et développement durable", source_ref: FLYER_LICENCE_ELECTRIQUE, actif: true}
+
+  # Certifications, langues et opportunités aux niveaux exacts des flyers.
+  - {formation_code: INGENIEUR_INFO, type_element: CERTIFICATION, code: CERT_HCIA, nom: HCIA, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: CERTIFICATION, code: CERT_AWS, nom: AWS, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: CERTIFICATION, code: CERT_NVIDIA, nom: NVIDIA, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: CERTIFICATION, code: CERT_ISTQB, nom: ISTQB, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: CERTIFICATION, code: CERT_CCNA, nom: "Cisco CCNA", organisme: Cisco, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: CERTIFICATION, code: CERT_IBM_SKILLSBUILD, nom: "IBM SkillsBuild", organisme: IBM, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: CERTIFICATION, code: CERT_MICROSOFT, nom: Microsoft, organisme: Microsoft, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: LANGUE, code: LANG_FR, nom: Francophone, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: LANGUE, code: LANG_EN, nom: Anglophone, source_ref: FLYER_GENIE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: CERTIFICATION, code: CERT_AWS, nom: AWS, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: CERTIFICATION, code: CERT_ISTQB, nom: ISTQB, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: CERTIFICATION, code: CERT_PYTHON, nom: Python, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: CERTIFICATION, code: CERT_BIG_DATA, nom: "Big Data", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: CERTIFICATION, code: CERT_IELTS, nom: IELTS, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: CERTIFICATION, code: CERT_DELF_DALF, nom: DELF/DALF, organisme: "France Éducation International", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: LANGUE, code: LANG_FR, nom: Francophone, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: LANGUE, code: LANG_EN, nom: Anglophone, source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: OPPORTUNITE, code: OPP_TN_INTL, nom: "Tunisie et international", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: CERTIFICATION, code: CERT_BLACK_BELT, nom: "Black Belt", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: CERTIFICATION, code: CERT_GREEN_BELT, nom: "Green Belt", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: CERTIFICATION, code: CERT_ISO_9001, nom: "ISO 9001", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: CERTIFICATION, code: CERT_ISO_45001, nom: "ISO 45001", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: CERTIFICATION, code: CERT_IELTS, nom: IELTS, source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: CERTIFICATION, code: CERT_DELF_DALF, nom: DELF/DALF, organisme: "France Éducation International", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: CERTIFICATION, code: CERT_ISO_14001, nom: "ISO 14001", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: CERTIFICATION, code: CERT_ISO_50001, nom: "ISO 50001", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: CERTIFICATION, code: CERT_ISO_9001, nom: "ISO 9001", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: CERTIFICATION, code: CERT_ISO_22000, nom: "ISO 22000", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: CERTIFICATION, code: CERT_IELTS, nom: IELTS, source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: CERTIFICATION, code: CERT_DELF_DALF, nom: DELF/DALF, organisme: "France Éducation International", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+
+  # Mobilité internationale annoncée.
+  - {formation_code: ARCHITECTURE_DNA, type_element: MOBILITE, code: MOB_DOUBLE_DIPLOME, nom: "Double diplôme", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: MOBILITE, code: MOB_SEMESTRE, nom: "Mobilité simple (un semestre d'études)", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: ARCHITECTURE_DNA, type_element: MOBILITE, code: MOB_STAGE_INTL, nom: "Stage international en entreprise", source_ref: FLYER_ARCHITECTURE, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: MOBILITE, code: MOB_DOUBLE_DIPLOME, nom: "Double diplôme", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: MOBILITE, code: MOB_SEMESTRE, nom: "Mobilité simple (un semestre d'études)", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_CIVIL, type_element: MOBILITE, code: MOB_STAGE_INTL, nom: "Stage international en entreprise", source_ref: FLYER_GENIE_CIVIL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: MOBILITE, code: MOB_DOUBLE_DIPLOME, nom: "Double diplôme", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: MOBILITE, code: MOB_SEMESTRE, nom: "Mobilité simple (un semestre d'études)", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_INDUSTRIEL, type_element: MOBILITE, code: MOB_STAGE_INTL, nom: "Stage international en entreprise", source_ref: FLYER_GENIE_INDUSTRIEL, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: MOBILITE, code: MOB_DOUBLE_DIPLOME, nom: "Double diplôme", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: MOBILITE, code: MOB_SEMESTRE, nom: "Mobilité simple (un semestre d'études)", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_MECANIQUE, type_element: MOBILITE, code: MOB_STAGE_INTL, nom: "Stage international en entreprise", source_ref: FLYER_GENIE_MECANIQUE, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: MOBILITE, code: MOB_DOUBLE_DIPLOME, nom: "Double diplôme", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: MOBILITE, code: MOB_SEMESTRE, nom: "Mobilité simple (un semestre d'études)", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: INGENIEUR_PROCEDES, type_element: MOBILITE, code: MOB_STAGE_INTL, nom: "Stage international en entreprise", source_ref: FLYER_GENIE_PROCEDES, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: MOBILITE, code: MOB_DOUBLE_DIPLOME, nom: "Double diplôme", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: MOBILITE, code: MOB_SEMESTRE, nom: "Mobilité simple (un semestre d'études)", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, type_element: MOBILITE, code: MOB_STAGE_INTL, nom: "Stage international en entreprise", source_ref: FLYER_LICENCE_INFO, actif: true}
+
+  # Axes et métiers des quatre spécialisations Licence Informatique.
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: CONTENU_PROGRAMME, code: AX_BD_VIS, nom: "Analyse & Visualisation", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: CONTENU_PROGRAMME, code: AX_BD_ML, nom: "Machine Learning", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: CONTENU_PROGRAMME, code: AX_BD_DS, nom: "Data Science", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: CONTENU_PROGRAMME, code: AX_BD_BIG, nom: "Big Data", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: CONTENU_PROGRAMME, code: AX_GL_WEB, nom: "Applications Web & Mobile", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: CONTENU_PROGRAMME, code: AX_GL_DEV, nom: "Développement logiciel", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: CONTENU_PROGRAMME, code: AX_GL_DB, nom: "Bases de données", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: CONTENU_PROGRAMME, code: AX_GL_AGILE, nom: "Méthodes Agile", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: CONTENU_PROGRAMME, code: AX_CY_AUDIT, nom: "Tests & Audit de sécurité", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: CONTENU_PROGRAMME, code: AX_CY_DATA, nom: "Protection des données", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: CONTENU_PROGRAMME, code: AX_CY_SYS, nom: "Sécurité des systèmes", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: CONTENU_PROGRAMME, code: AX_CY_NET, nom: "Réseaux", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: CONTENU_PROGRAMME, code: AX_IOT_EMB, nom: "Systèmes embarqués", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: CONTENU_PROGRAMME, code: AX_IOT_OBJ, nom: "Internet des Objets", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: CONTENU_PROGRAMME, code: AX_IOT_CAP, nom: "Capteurs & IoT", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: CONTENU_PROGRAMME, code: AX_IOT_40, nom: "Industrie 4.0", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: METIER, code: LIC_BD_M_DBA, nom: "Administrateur de bases de données", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: METIER, code: LIC_BD_M_ANALYSTE_PROG, nom: "Analyste programmeur informatique", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: METIER, code: LIC_BD_M_INTEGRATEUR, nom: "Intégrateur logiciels métiers", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_BIG_DATA, type_element: METIER, code: LIC_BD_M_TESTEUR, nom: "Testeur / Testeuse informatique", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: METIER, code: LIC_GL_M_ANALYSTE_ETUDE, nom: "Analyste d'étude informatique", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: METIER, code: LIC_GL_M_DECISIONNEL, nom: "Analyste décisionnel", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: METIER, code: LIC_GL_M_DEV_DATA, nom: "Développeur Data", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: METIER, code: LIC_GL_M_DATA_ANALYST, nom: "Data Analyst", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: METIER, code: LIC_CY_M_ADMIN_RESEAU, nom: "Administrateur réseau informatique", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: METIER, code: LIC_CY_M_ANALYSTE_RESEAU, nom: "Analyste réseau informatique", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: METIER, code: LIC_CY_M_ANALYSTE_CYBER, nom: "Analyste en cybersécurité", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_CYBER, type_element: METIER, code: LIC_CY_M_CLOUD, nom: "Technicien Cloud", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: METIER, code: LIC_IOT_M_TECH, nom: "Technicienne en systèmes embarqués", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: METIER, code: LIC_IOT_M_TEST, nom: "Spécialiste test et validation logiciel", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: METIER, code: LIC_IOT_M_DEV, nom: "Développeuse systèmes embarqués", source_ref: FLYER_LICENCE_INFO, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_IOT, type_element: METIER, code: LIC_IOT_M_CLOUD, nom: "Technicien Cloud", source_ref: FLYER_LICENCE_INFO, actif: true}
+
+  # Faits historiques publics encore utiles, remappés vers le catalogue courant.
+  - {formation_code: null, type_element: INFORMATION, code: IIT_CONTACT_PUBLIC, nom: "Contacts publics IIT Sfax", description: "L'Institut International de Technologie est situé à Sfax. Le téléphone public affiché est (+216) 74 46 50 20. L'adresse email générale publique est info@iit.tn. Le contact public du Génie Informatique est dep.tic@iit.ens.tn.", source_ref: SRC_IIT_MAIN, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: MODULE, code: MOD_PREPA_PHYSIQUE, nom: Physique, source_ref: SRC_PREPA, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: MODULE, code: MOD_PREPA_ANALYSE, nom: Analyse, source_ref: SRC_PREPA, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: MODULE, code: MOD_PREPA_ALGEBRE, nom: Algèbre, source_ref: SRC_PREPA, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: MODULE, code: MOD_PREPA_CHIMIE, nom: Chimie, source_ref: SRC_PREPA, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: MODULE, code: MOD_PREPA_INFO, nom: Informatique, source_ref: SRC_PREPA, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: INFORMATION, code: INFO_PREPA_ADMISSION, nom: "Cycle Préparatoire - Prérequis institutionnels", description: "Pour ce projet, le Cycle Préparatoire MP accepte les bacs Math et Sciences. L'admission finale n'est jamais automatique.", source_ref: PROJECT_INSTITUTIONAL_RULES, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: INFORMATION, code: INFO_PREPA_PROGRAMME, nom: "Cycle Préparatoire - Programme", description: "Le programme public présente notamment physique, analyse, algèbre, chimie et informatique.", source_ref: SRC_PREPA, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: INFORMATION, code: INFO_PREPA_DUREE, nom: "Cycle Préparatoire - Durée", description: "Le guide étudiant public indique une durée de 2 ans pour le Cycle Préparatoire.", source_ref: SRC_GUIDE_ETUDIANT, actif: true}
+  - {formation_code: PREPA_GENERAL, specialisation_code: MP, type_element: INFORMATION, code: INFO_PREPA_DIFFICULTE, nom: "Cycle Préparatoire - Exigence", description: "Le site souligne que la Prépa demande beaucoup de travail et d'endurance.", source_ref: SRC_PREPA, actif: true}
+
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: MODULE, code: MOD_GLSI_IA, nom: "Intelligence Artificielle", description: "Mentionné dans le plan d'études public de la Licence Informatique.", source_ref: SRC_PLAN_LICENCE_GLSI, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: MODULE, code: MOD_GLSI_WEB, nom: "Technologies Web", description: "Mentionné dans le plan d'études public de la Licence Informatique.", source_ref: SRC_PLAN_LICENCE_GLSI, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: MODULE, code: MOD_GLSI_BDD, nom: "Bases de Données", description: "Mentionné dans le plan d'études public de la Licence Informatique.", source_ref: SRC_PLAN_LICENCE_GLSI, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: MODULE, code: MOD_GLSI_GAME, nom: "Game Development", description: "Mentionné dans le plan d'études public de la Licence Informatique.", source_ref: SRC_PLAN_LICENCE_GLSI, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: MODULE, code: MOD_GLSI_DOTNET, nom: "Programmation .NET", description: "Mentionné dans le plan d'études public de la Licence Informatique.", source_ref: SRC_PLAN_LICENCE_GLSI, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: INFORMATION, code: INFO_LIC_GLSI_PROJECTS, nom: "Licence GLSI - Projets académiques", description: "Le plan public contient un Projet Tutoré et un Projet Fédéré.", source_ref: SRC_PLAN_LICENCE_GLSI, actif: true}
+  - {formation_code: LICENCE_INFO, specialisation_code: LIC_INFO_GLSI, type_element: INFORMATION, code: INFO_LIC_GLSI_CAREERS, nom: "Licence GLSI - Débouchés publics", description: "Les perspectives citées incluent développement logiciel et web, systèmes d'information, gestion de projets informatiques et analyse de données; elles ne garantissent pas un emploi.", source_ref: SRC_LICENCE_GLSI, actif: true}
+
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: MODULE, code: MOD_GLID_SOFTWARE, nom: "Génie logiciel", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: MODULE, code: MOD_GLID_DISTRIBUTED, nom: "Systèmes distribués", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: MODULE, code: MOD_GLID_CLOUD, nom: "Cloud Computing", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: MODULE, code: MOD_GLID_AI, nom: "Intelligence Artificielle", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: MODULE, code: MOD_GLID_DATA, nom: "Science des données", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: MODULE, code: MOD_GLID_BI, nom: "Informatique décisionnelle", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: INFORMATION, code: INFO_GLID_PROGRAMME, nom: "GLID - Programme et orientation", description: "GLID couvre notamment génie logiciel, systèmes distribués, cloud computing, intelligence artificielle, science des données et informatique décisionnelle.", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: GLID, type_element: INFORMATION, code: INFO_GLID_CAREERS, nom: "GLID - Débouchés publics", description: "Les perspectives citées incluent ingénierie logiciel, BI, Data, IA/ML, architecture logicielle, Big Data, DevOps et gestion de projet; elles ne garantissent pas un emploi.", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: MODULE, code: MOD_ARSI_NETWORK, nom: Réseaux, source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: MODULE, code: MOD_ARSI_SYSTEMS, nom: "Administration systèmes", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: MODULE, code: MOD_ARSI_CYBER, nom: Cybersécurité, source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: MODULE, code: MOD_ARSI_CLOUD, nom: "Infrastructures Cloud", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: MODULE, code: MOD_ARSI_DEVSECOPS, nom: DevSecOps, source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: INFORMATION, code: INFO_ARSI_PROGRAMME, nom: "ARSI - Programme et orientation", description: "ARSI couvre notamment réseaux, administration systèmes, cybersécurité, infrastructures cloud et DevSecOps.", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: INFORMATION, code: INFO_ARSI_CAREERS, nom: "ARSI - Débouchés publics", description: "Les perspectives citées incluent administration réseaux et systèmes, ingénierie réseaux/cybersécurité, DevSecOps, audit et sécurité Cloud/IoT; elles ne garantissent pas un emploi.", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: INFORMATION, code: INFO_ING_ADMISSION, nom: "Cycle Génie Informatique - Admission", description: "La candidature se fait par pré-inscription, puis étude de dossier et entretien de validation. L'admission finale n'est pas automatique.", source_ref: SRC_IIT_ADMISSION, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: INFORMATION, code: INFO_ING_DUREE, nom: "Cycle Génie Informatique - Durée", description: "Le guide étudiant public indique une durée de 3 ans après une Licence LMD ou un diplôme équivalent.", source_ref: SRC_GUIDE_ETUDIANT, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: INFORMATION, code: INFO_ING_PEDAGOGIE, nom: "Génie Informatique - Pédagogie et projets", description: "Le programme combine bases théoriques, projets appliqués, travail en équipe, communication et gestion de projets d'ingénierie.", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: INGENIEUR_INFO, type_element: INFORMATION, code: INFO_ING_ACCREDITATION, nom: "Génie Informatique - Accréditation", description: "EURO-INF/ASIIN est une accréditation du programme et non une certification individuelle de l'étudiant.", source_ref: SRC_ACCREDITATIONS, actif: true}

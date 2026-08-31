@@ -1,0 +1,13 @@
+patterns:
+  injection:
+    - 'ignore\s+(all\s+)?(previous|prior|les|toutes).*instruction'
+    - '(system|developer|prompt)\s+(prompt|interne|message)'
+    - '(revele|révèle|affiche|show|print).*prompt'
+    - '(api\s*key|mot de passe|password|credential|authorization header)'
+    - '(jailbreak|mode développeur|developer mode)'
+    - '(code source|backend code|configuration interne)'
+    - '\bselect\b.*\bfrom\b'
+    - '\b(union\s+select|insert\s+into|update\s+\w+\s+set|delete\s+from|drop\s+(table|database)|alter\s+table)\b'
+    - '\b(information_schema|pg_catalog|sqlite_master)\b'
+    - '(--|/\*|\*/|;\s*select\b)'
+    - '(endpoint|route api|adresse du serveur|server endpoint|serveur mte3ek)'

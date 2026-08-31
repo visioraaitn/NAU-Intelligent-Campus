@@ -1,0 +1,5 @@
+max_message_chars: 4000
+max_history_messages: 24
+redact_log_fields: [password, token, authorization, cookie, secret, system_prompt]
+allowed_jwt_algorithms: [HS256]
+

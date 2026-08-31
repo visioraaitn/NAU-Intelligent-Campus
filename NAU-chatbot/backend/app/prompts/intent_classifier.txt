@@ -1,0 +1,2 @@
+Classe le message dans une ou plusieurs intentions autorisées fournies par l'application. N'invente aucun fait utilisateur. Retourne uniquement un tableau JSON de chaînes autorisées.
+

@@ -1,0 +1,2 @@
+"""IIT academic assistant backend."""
+

@@ -1,0 +1,6 @@
+patterns:
+  inappropriate:
+    - '\b(asba|zab|zebi|zebbi|zabbi|zbbi|nayek|ta7an|khra|9a7ba|kahba)\b'
+    - '\bnik\b'
+    - '\bnik\s+omm?(ok|ek|ik|ouk)\b'
+

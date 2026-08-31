@@ -1,0 +1,14 @@
+default_max_lines: 6
+detail_max_lines: 8
+cta_cooldown_turns: 3
+cta_max_count: 2
+qualification_attempts: 1
+interest_keywords:
+  GENERAL_INFO: [informatique, info, numérique, numerique]
+  DATA_AI: [data, données, ia, intelligence artificielle, machine learning, big data, analyse]
+  SOFTWARE: [logiciel, développement, web, mobile, programmation, cloud, devops]
+  CYBER_NETWORKS: [cyber, sécurité, réseau, reseau, systèmes, systemes, devsecops]
+  EMBEDDED_IOT: [iot, embarqué, embarque, capteur, robotique, industrie 4.0]
+  INDUSTRY: [industrie, production, qualité, qualite, supply chain, maintenance]
+  CIVIL_ARCH: [architecture, bâtiment, batiment, construction, bim, civil]
+  ENERGY: [énergie, energie, renouvelable, électrique, electrique, procédés, procedes]

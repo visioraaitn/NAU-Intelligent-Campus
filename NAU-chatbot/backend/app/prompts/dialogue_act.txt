@@ -1,0 +1,2 @@
+Détermine l'acte conversationnel du message original à partir de la liste autorisée. La reformulation ESPRIT est seulement auxiliaire. Retourne uniquement le nom de l'acte.
+

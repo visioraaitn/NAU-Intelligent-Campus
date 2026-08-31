@@ -1,0 +1,17 @@
+.env
+.venv/
+.inference-venv/
+.runtime/
+**/__pycache__/
+**/*.py[cod]
+**/.mypy_cache/
+**/.pytest_cache/
+**/.ruff_cache/
+**/coverage.xml
+**/htmlcov/
+frontend/node_modules/
+frontend/dist/
+backups/
+models/
+*.log
+*.sqlite*

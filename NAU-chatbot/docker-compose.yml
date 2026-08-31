@@ -1,0 +1,268 @@
+name: iit-academic-assistant
+
+x-data-environment: &data-environment
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-iit_academic}
+  POSTGRES_USER: ${POSTGRES_USER:-iit}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+  POSTGRES_POOL_SIZE: ${POSTGRES_POOL_SIZE:-10}
+  POSTGRES_MAX_OVERFLOW: ${POSTGRES_MAX_OVERFLOW:-20}
+  REDIS_URL: redis://:${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}@redis:6379/0
+  CHROMA_HOST: chroma
+  CHROMA_PORT: "8000"
+  CHROMA_COLLECTION: ${CHROMA_COLLECTION:-iit_academic_v1}
+  INFERENCE_BASE_URL: http://inference:8010
+  INFERENCE_SERVICE_TOKEN: ${INFERENCE_SERVICE_TOKEN:?Set INFERENCE_SERVICE_TOKEN in .env}
+  INFERENCE_TIMEOUT_SECONDS: ${INFERENCE_TIMEOUT_SECONDS:-120}
+  RAG_QUEUE_KEY: ${RAG_QUEUE_KEY:-iit:rag:jobs}
+  RAG_PROCESSING_KEY: ${RAG_PROCESSING_KEY:-iit:rag:processing}
+  RAG_DEAD_LETTER_KEY: ${RAG_DEAD_LETTER_KEY:-iit:rag:dead}
+  RAG_MAX_ATTEMPTS: ${RAG_MAX_ATTEMPTS:-5}
+  RAG_RETRY_BASE_SECONDS: ${RAG_RETRY_BASE_SECONDS:-2}
+  RAG_STATUS_TTL_SECONDS: ${RAG_STATUS_TTL_SECONDS:-604800}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_RAW_MESSAGES: ${LOG_RAW_MESSAGES:-false}
+  ANONYMIZED_TELEMETRY: "FALSE"
+
+services:
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${FRONTEND_API_BASE_URL:-/api/v1}
+    image: iit-academic-frontend:local
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "${FRONTEND_BIND_ADDRESS:-127.0.0.1}:${FRONTEND_PORT:-8080}:8080"
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /var/cache/nginx:rw,nosuid,nodev,noexec,mode=1777,size=32m
+      - /var/run:rw,nosuid,nodev,noexec,mode=1777,size=4m
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777,size=16m
+    security_opt:
+      - no-new-privileges:true
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    image: iit-academic-backend:local
+    restart: unless-stopped
+    command: ["./scripts/start-api.sh"]
+    environment:
+      <<: *data-environment
+      APP_ENV: ${APP_ENV:-production}
+      APP_NAME: ${APP_NAME:-IIT Academic Assistant}
+      APP_SECRET_KEY: ${APP_SECRET_KEY:?Set APP_SECRET_KEY in .env}
+      PUBLIC_BASE_URL: ${PUBLIC_BASE_URL:-http://localhost:8080}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD_HASH: ${ADMIN_PASSWORD_HASH:?Set ADMIN_PASSWORD_HASH in .env}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env}
+      JWT_ALGORITHM: ${JWT_ALGORITHM:-HS256}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-900}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-604800}
+      SECURE_COOKIES: ${SECURE_COOKIES:-true}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      TRUSTED_HOSTS: ${TRUSTED_HOSTS:-localhost,127.0.0.1,backend}
+      MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-32768}
+      CHAT_RATE_LIMIT_PER_MINUTE: ${CHAT_RATE_LIMIT_PER_MINUTE:-20}
+      ADMIN_RATE_LIMIT_PER_MINUTE: ${ADMIN_RATE_LIMIT_PER_MINUTE:-60}
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-86400}
+      SESSION_LOCK_TTL_SECONDS: ${SESSION_LOCK_TTL_SECONDS:-120}
+      RECENT_HISTORY_LIMIT: ${RECENT_HISTORY_LIMIT:-24}
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+      FORWARDED_ALLOW_IPS: ${FORWARDED_ALLOW_IPS:-*}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+      inference:
+        condition: service_started
+    ports:
+      - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
+    networks:
+      - edge
+      - internal
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777,size=256m
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+
+  postgres:
+    image: postgres:16.6-bookworm
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-iit_academic}
+      POSTGRES_USER: ${POSTGRES_USER:-iit}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"$${POSTGRES_USER}\" -d \"$${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+
+  redis:
+    image: redis:7.4.1-alpine
+    restart: unless-stopped
+    command:
+      - redis-server
+      - --appendonly
+      - "yes"
+      - --appendfsync
+      - everysec
+      - --requirepass
+      - ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    environment:
+      REDISCLI_AUTH: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+
+  chroma:
+    image: chromadb/chroma:0.6.3
+    restart: unless-stopped
+    environment:
+      IS_PERSISTENT: "TRUE"
+      PERSIST_DIRECTORY: /chroma/chroma
+      ANONYMIZED_TELEMETRY: "FALSE"
+      ALLOW_RESET: "FALSE"
+    volumes:
+      - chroma_data:/chroma/chroma
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v2/heartbeat', timeout=3)"
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    networks:
+      - internal
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 30s
+
+  rag-worker:
+    image: iit-academic-backend:local
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: runtime
+    restart: unless-stopped
+    command: ["./scripts/start-worker.sh"]
+    environment:
+      <<: *data-environment
+      APP_ENV: ${APP_ENV:-production}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+      inference:
+        condition: service_healthy
+    networks:
+      - internal
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,mode=1777,size=256m
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 60s
+
+  inference:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.inference
+      target: runtime
+    image: iit-academic-inference:local
+    restart: unless-stopped
+    command: ["./scripts/start-inference.sh"]
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      INFERENCE_SERVICE_TOKEN: ${INFERENCE_SERVICE_TOKEN:?Set INFERENCE_SERVICE_TOKEN in .env}
+      ESPRIT_MODEL_ID: ${ESPRIT_MODEL_ID:-}
+      ESPRIT_MODEL_PATH: ${ESPRIT_MODEL_PATH:-}
+      QWEN_MODEL_ID: ${QWEN_MODEL_ID:-}
+      QWEN_MODEL_PATH: ${QWEN_MODEL_PATH:-}
+      EMBED_MODEL_ID: ${EMBED_MODEL_ID:-}
+      EMBED_MODEL_PATH: ${EMBED_MODEL_PATH:-}
+      RERANK_MODEL_ID: ${RERANK_MODEL_ID:-}
+      RERANK_MODEL_PATH: ${RERANK_MODEL_PATH:-}
+      MODELS_LOCAL_ONLY: ${MODELS_LOCAL_ONLY:-true}
+      HF_HOME: /models/huggingface
+      XDG_CACHE_HOME: /models/huggingface/.cache
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-1}
+      TRANSFORMERS_OFFLINE: ${TRANSFORMERS_OFFLINE:-1}
+      TOKENIZERS_PARALLELISM: "false"
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    volumes:
+      - model_data:/models/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 2gb
+    networks:
+      - internal
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=8g
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 120s
+
+networks:
+  edge:
+    driver: bridge
+  internal:
+    driver: bridge
+    internal: true
+
+volumes:
+  postgres_data:
+    name: iit_academic_postgres_data
+  redis_data:
+    name: iit_academic_redis_data
+  chroma_data:
+    name: iit_academic_chroma_data
+  model_data:
+    name: iit_academic_model_data
