@@ -1,5 +1,0 @@
-{"doc_id":"POL-SIVO-01","category":"deliveries","title":"Delivery target","text":"SIVO delivers to the optician agency or professional pickup point, never directly to the final patient. Delivery ETA is always approximate and depends on agency and sector planning."}
-{"doc_id":"POL-SIVO-02","category":"customer_identification","title":"Num client first","text":"For order tracking and order creation, num_client must be collected first before continuing with order details or status confirmation."}
-{"doc_id":"POL-SIVO-03","category":"pricing","title":"Price policy","text":"Price ranges are indicative only. Final price must be confirmed against the current commercial catalog and product configuration."}
-{"doc_id":"POL-SIVO-04","category":"availability","title":"Availability policy","text":"Availability is never guaranteed from memory alone. The agent must confirm with tools, catalog, or backoffice before making a commitment."}
-{"doc_id":"POL-SIVO-05","category":"medical_safety","title":"Medical safety","text":"The assistant can restate order parameters and optical values but must not provide diagnosis, treatment advice, or medical recommendations."}

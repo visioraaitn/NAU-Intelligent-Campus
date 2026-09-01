@@ -1,7 +1,0 @@
-store_id,city,store_name,hours_weekday,hours_sat,hours_sun,phone_store
-SIVO-TUN-01,Tunis,SIVO Coordination Tunis,08:30-17:30,08:30-12:30,closed,+216 71 500 001
-SIVO-ARI-01,Ariana,SIVO Coordination Ariana,08:30-17:30,08:30-12:30,closed,+216 70 500 002
-SIVO-SFX-01,Sfax,SIVO Coordination Sfax,08:30-17:00,08:30-12:30,closed,+216 74 500 003
-SIVO-SUS-01,Sousse,SIVO Coordination Sousse,08:30-17:30,08:30-12:30,closed,+216 73 500 004
-SIVO-NAB-01,Nabeul,SIVO Coordination Nabeul,08:30-17:00,08:30-12:00,closed,+216 72 500 005
-SIVO-MON-01,Monastir,SIVO Coordination Monastir,08:30-17:00,08:30-12:00,closed,+216 73 500 006
