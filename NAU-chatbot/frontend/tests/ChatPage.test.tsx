@@ -155,8 +155,8 @@ describe("ChatPage", () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole("button", { name: "Quelles formations propose l’IIT ?" }));
-    expect(send).toHaveBeenCalledWith("Quelles formations propose l’IIT ?");
+    await user.click(screen.getByRole("button", { name: "Explorer les formations" }));
+    expect(send).toHaveBeenCalledWith("Explorer les formations");
   });
 
   it("sends typed text without rendering it as HTML", async () => {

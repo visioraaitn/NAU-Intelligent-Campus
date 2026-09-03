@@ -12,9 +12,10 @@ import { useVoiceRecorder } from "../features/chat/useVoiceRecorder";
 import { useOnlineStatus } from "../hooks/useOnlineStatus";
 
 const suggestions = [
-  "Quelles formations propose l’IIT ?",
-  "Quelle filière correspond à mon profil ?",
-  "Quels sont les frais d’inscription ?",
+  "Explorer les formations",
+  "Vérifier mon admissibilité",
+  "Consulter les frais",
+  "Préinscription",
 ];
 
 export function ChatPage() {
@@ -90,23 +91,56 @@ export function ChatPage() {
   };
 
   return (
-    <main className="chat-workspace" id="main-content">
-      {user && <ConversationSidebar conversations={history.items} activeId={conversationId} user={user} open={sidebarOpen} hasMore={history.items.length < history.total} loading={history.loading} onClose={() => setSidebarOpen(false)} onNew={() => { void reset(); navigate("/chat"); setSidebarOpen(false); }} onRename={history.rename} onDelete={(item) => setDeleteTarget(item)} onLoadMore={history.loadMore} onLogout={() => void handleLogout()} />}
-      <div className="chat-page">
-      <section className="chat-card" aria-labelledby="chat-title">
-        <div className="chat-card__topbar">
-          <button className="icon-button chat-history-button" type="button" onClick={() => setSidebarOpen(true)} aria-label="Ouvrir l’historique"><Icon name="menu" /></button>
-          <div className="assistant-identity">
-            <div>
-              <h1 id="chat-title">Assistant IIT</h1>
-              <p>Orientation &amp; informations académiques</p>
-            </div>
+    <div className="admin-shell chat-shell">
+      <a className="skip-link" href="#chat-content">Aller au contenu</a>
+
+      {user && (
+        <ConversationSidebar
+          conversations={history.items}
+          activeId={conversationId}
+          user={user}
+          open={sidebarOpen}
+          hasMore={history.items.length < history.total}
+          loading={history.loading}
+          onClose={() => setSidebarOpen(false)}
+          onNew={() => {
+            void reset();
+            navigate("/chat");
+            setSidebarOpen(false);
+          }}
+          onRename={history.rename}
+          onDelete={(item) => setDeleteTarget(item)}
+          onLoadMore={history.loadMore}
+          onLogout={() => void handleLogout()}
+        />
+      )}
+
+      <div className="admin-main chat-main">
+        <header className="admin-topbar chat-topbar">
+          <button
+            className="icon-button admin-menu-button"
+            type="button"
+            onClick={() => setSidebarOpen(true)}
+            aria-label="Ouvrir le menu"
+          >
+            <Icon name="menu" />
+          </button>
+          <div className="admin-topbar__title">
+            <span>Assistant</span>
+            <strong>Assistant IIT</strong>
           </div>
-          <span className="availability">
-            <span className={`availability__dot ${online ? "" : "availability__dot--offline"}`} />
-            {online ? "En ligne" : "Hors connexion"}
-          </span>
-        </div>
+          {user && (
+            <div className="admin-user" aria-label="Session utilisateur">
+              <span className="admin-user__avatar" aria-hidden="true">
+                {user.name.slice(0, 1).toUpperCase()}
+              </span>
+              <span>
+                <strong>{user.name}</strong>
+                <small>{user.role === "ADMIN" ? "Administrateur" : "Utilisateur"}</small>
+              </span>
+            </div>
+          )}
+        </header>
 
         {!online && (
           <div className="connection-banner" role="status">
@@ -114,94 +148,126 @@ export function ChatPage() {
           </div>
         )}
 
-        <div className="conversation" role="log" aria-live="polite" aria-relevant="additions text">
-          {messages.length === 0 ? (
-            <ChatWelcome
-              suggestions={suggestions}
-              disabled={isBusy || !online}
-              onSelect={(suggestion) => void send(suggestion)}
-            />
-          ) : (
-            <div className="message-list">
-              {messages.map((message, index) => {
-                const isLatestAnswer =
-                  message.role === "assistant" &&
-                  !messages.slice(index + 1).some((next) => next.role === "assistant");
-                return (
-                  <ChatMessage
-                    key={message.id}
-                    ref={isLatestAnswer ? latestAnswerRef : undefined}
-                    message={message}
-                    latestAssistantMessage={isLatestAnswer}
-                  />
-                );
-              })}
-              {status === "sending" && <ChatLoadingMessage />}
-              <div ref={endRef} />
+        <main className="chat-content-area" id="chat-content">
+          <div className="conversation" role="log" aria-live="polite" aria-relevant="additions text">
+            <div className="chat-centered-container">
+              {messages.length === 0 ? (
+                <ChatWelcome
+                  suggestions={suggestions}
+                  disabled={isBusy || !online}
+                  onSelect={(suggestion) => void send(suggestion)}
+                />
+              ) : (
+                <div className="message-list">
+                  {messages.map((message, index) => {
+                    const isLatestAnswer =
+                      message.role === "assistant" &&
+                      !messages.slice(index + 1).some((next) => next.role === "assistant");
+                    return (
+                      <ChatMessage
+                        key={message.id}
+                        ref={isLatestAnswer ? latestAnswerRef : undefined}
+                        message={message}
+                        latestAssistantMessage={isLatestAnswer}
+                      />
+                    );
+                  })}
+                  {status === "sending" && <ChatLoadingMessage />}
+                  <div ref={endRef} />
+                </div>
+              )}
+            </div>
+          </div>
+
+          {error && (
+            <div className="chat-error-wrapper">
+              <div className="chat-error" role="alert">
+                <span>Impossible d’obtenir une réponse.</span>
+                <button
+                  className="button button--ghost button--compact"
+                  type="button"
+                  onClick={retryLast}
+                  disabled={isBusy}
+                >
+                  <Icon name="refresh" /> Réessayer
+                </button>
+              </div>
             </div>
           )}
-        </div>
 
-        {error && (
-          <div className="chat-error" role="alert">
-            <span>Impossible d’obtenir une réponse.</span>
-            <button className="button button--ghost button--compact" type="button" onClick={retryLast} disabled={isBusy}>
-              <Icon name="refresh" /> Réessayer
-            </button>
+          <div className="composer-wrapper">
+            <div className="chat-centered-container">
+              <form className="composer" onSubmit={submit}>
+                <label className="sr-only" htmlFor="chat-message">Votre message</label>
+                <textarea
+                  ref={textareaRef}
+                  id="chat-message"
+                  maxLength={CHAT_MESSAGE_MAX_LENGTH}
+                  placeholder={status === "connecting" ? "Connexion à l’assistant…" : "Posez votre question…"}
+                  rows={1}
+                  value={input}
+                  disabled={status === "connecting"}
+                  onChange={(event) => setInput(event.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <div className="composer__actions">
+                  <button
+                    className={`voice-button ${voice.status === "recording" ? "voice-button--recording" : ""}`}
+                    type="button"
+                    onClick={voice.toggleRecording}
+                    disabled={voice.status === "transcribing" || (voice.status !== "recording" && (isBusy || !online))}
+                    aria-label={voice.status === "recording" ? "Arrêter l’enregistrement vocal" : "Démarrer l’enregistrement vocal"}
+                  >
+                    {voice.status === "transcribing" ? (
+                      <span className="spinner spinner--small" aria-hidden="true" />
+                    ) : (
+                      <Icon name={voice.status === "recording" ? "stop" : "microphone"} />
+                    )}
+                  </button>
+                  <button
+                    className="send-button"
+                    type="submit"
+                    disabled={!input.trim() || isBusy || !online}
+                    aria-label="Envoyer le message"
+                  >
+                    {isBusy ? <span className="spinner spinner--small" aria-hidden="true" /> : <Icon name="send" />}
+                  </button>
+                </div>
+                {voice.error && <div className="voice-feedback voice-feedback--error" role="alert">{voice.error}</div>}
+                <div className="composer__hint">
+                  <span aria-live="polite">
+                    {voice.status === "recording" && (
+                      <>
+                        <i className="recording-dot" aria-hidden="true" /> Enregistrement en cours — recliquez pour arrêter
+                      </>
+                    )}
+                    {voice.status === "transcribing" && "Transcription en cours…"}
+                    {(voice.status === "idle" || voice.status === "error") && (
+                      "Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne"
+                    )}
+                  </span>
+                  <span className={input.length > CHAT_MESSAGE_MAX_LENGTH * 0.9 ? "text-warning" : ""}>
+                    {input.length}/{CHAT_MESSAGE_MAX_LENGTH}
+                  </span>
+                </div>
+              </form>
+              <p className="chat-disclaimer">
+                Les réponses sont indicatives. Vérifiez les informations importantes auprès de l’IIT.
+              </p>
+            </div>
           </div>
-        )}
-
-        <form className="composer" onSubmit={submit}>
-          <label className="sr-only" htmlFor="chat-message">Votre message</label>
-          <textarea
-            ref={textareaRef}
-            id="chat-message"
-            maxLength={CHAT_MESSAGE_MAX_LENGTH}
-            placeholder={status === "connecting" ? "Connexion à l’assistant…" : "Posez votre question…"}
-            rows={1}
-            value={input}
-            disabled={status === "connecting"}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={handleKeyDown}
-          />
-          <div className="composer__actions">
-            <button
-              className={`voice-button ${voice.status === "recording" ? "voice-button--recording" : ""}`}
-              type="button"
-              onClick={voice.toggleRecording}
-              disabled={voice.status === "transcribing" || (voice.status !== "recording" && (isBusy || !online))}
-              aria-label={voice.status === "recording" ? "Arrêter l’enregistrement vocal" : "Démarrer l’enregistrement vocal"}
-            >
-              {voice.status === "transcribing"
-                ? <span className="spinner spinner--small" aria-hidden="true" />
-                : <Icon name={voice.status === "recording" ? "stop" : "microphone"} />}
-            </button>
-            <button
-              className="send-button"
-              type="submit"
-              disabled={!input.trim() || isBusy || !online}
-              aria-label="Envoyer le message"
-            >
-              {isBusy ? <span className="spinner spinner--small" aria-hidden="true" /> : <Icon name="send" />}
-            </button>
-          </div>
-          {voice.error && <div className="voice-feedback voice-feedback--error" role="alert">{voice.error}</div>}
-          <div className="composer__hint">
-            <span aria-live="polite">
-              {voice.status === "recording" && <><i className="recording-dot" aria-hidden="true" /> Enregistrement en cours — recliquez pour arrêter</>}
-              {voice.status === "transcribing" && "Transcription en cours…"}
-              {(voice.status === "idle" || voice.status === "error") && "Entrée pour envoyer · Maj + Entrée pour une nouvelle ligne"}
-            </span>
-            <span className={input.length > CHAT_MESSAGE_MAX_LENGTH * 0.9 ? "text-warning" : ""}>
-              {input.length}/{CHAT_MESSAGE_MAX_LENGTH}
-            </span>
-          </div>
-        </form>
-      </section>
-      <p className="chat-disclaimer">Les réponses sont indicatives. Vérifiez les informations importantes auprès de l’IIT.</p>
+        </main>
       </div>
 
-      <ConfirmDialog open={deleteTarget !== null} title="Supprimer cette conversation ?" message={deleteTarget ? `« ${deleteTarget.title} » sera supprimée définitivement.` : ""} confirmLabel="Supprimer" destructive onCancel={() => setDeleteTarget(null)} onConfirm={() => void handleDelete()} />
-    </main>
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Supprimer cette conversation ?"
+        message={deleteTarget ? `« ${deleteTarget.title} » sera supprimée définitivement.` : ""}
+        confirmLabel="Supprimer"
+        destructive
+        onCancel={() => setDeleteTarget(null)}
+        onConfirm={() => void handleDelete()}
+      />
+    </div>
   );
 }

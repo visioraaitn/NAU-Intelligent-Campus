@@ -13,9 +13,9 @@ interface ChatWelcomeProps {
 export function ChatWelcome({ suggestions, disabled, onSelect }: ChatWelcomeProps) {
   return (
     <div className="chat-welcome">
-      <span className="welcome-icon" aria-hidden="true"><Icon name="chat" /></span>
+      <span className="welcome-badge">Assistant IIT</span>
       <h2>Comment puis-je vous aider&nbsp;?</h2>
-      <p>Posez une question sur votre orientation, les formations ou votre inscription.</p>
+      <p>Posez votre question sur les formations, l’admission, l’orientation ou les frais.</p>
       <div className="suggestions" aria-label="Questions suggérées">
         {suggestions.map((suggestion) => (
           <button
@@ -26,7 +26,6 @@ export function ChatWelcome({ suggestions, disabled, onSelect }: ChatWelcomeProp
             onClick={() => onSelect(suggestion)}
           >
             {suggestion}
-            <Icon name="chevron-right" />
           </button>
         ))}
       </div>
