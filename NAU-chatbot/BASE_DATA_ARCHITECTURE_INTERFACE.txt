@@ -1,0 +1,450 @@
+IIT ACADEMIC BASE & INTERFACE ARCHITECTURE
+=========================================
+
+OBJECTIF DU DOCUMENT
+--------------------
+Ce fichier décrit uniquement :
+- la structure de base de données du catalogue académique,
+- les relations entre les tables,
+- les pages et écrans de l’interface qui utilisent cette base,
+- les responsabilités métier de chaque section.
+
+Il ne couvre PAS l’architecture RAG ni l’architecture du chatbot.
+
+
+1) ARCHITECTURE DE BASE DE DONNÉES
+-----------------------------------
+
+Les tables principales sont gérées côté backend dans :
+- backend/app/models/sqlalchemy/academic.py
+- backend/app/api/routers/admin/
+- backend/app/services/academic/
+- backend/app/repositories/academic/
+
+Table 1 : parcours
+-------------------
+Nom de table : parcours
+Description : niveau global du cursus, par exemple : Cycle Préparatoire, Licence, Cycle Ingénieur, Architecture.
+Colonnes principales :
+- id
+- code (unique)
+- nom
+- duree_annees
+- description
+- actif
+
+Relation :
+- 1 parcours -> plusieurs formations
+
+Table 2 : formation
+--------------------
+Nom de table : formation
+Description : programme concret offert dans un parcours.
+Colonnes principales :
+- id
+- parcours_id (FK vers parcours.id)
+- code (unique)
+- nom
+- intitule_diplome
+- duree_annees
+- nb_semestres
+- credits_total
+- langues_enseignement (array)
+- description
+- source_ref
+- actif
+
+Relation :
+- plusieurs formations appartiennent à 1 parcours
+- 1 formation -> plusieurs specialisations
+- 1 formation -> plusieurs formation_element
+- 1 formation -> plusieurs tarif
+- 1 formation -> plusieurs regle_orientation
+- 1 formation -> plusieurs accreditation
+
+Table 3 : specialisation
+------------------------
+Nom de table : specialisation
+Description : branche ou option d’une formation.
+Colonnes principales :
+- id
+- formation_id (FK vers formation.id)
+- code
+- nom
+- description
+- ordre_affichage
+- source_ref
+- actif
+
+Relation :
+- plusieurs specialisations appartiennent à 1 formation
+- 1 specialisation -> plusieurs formation_element
+- 1 specialisation -> plusieurs tarif
+- 1 specialisation -> plusieurs regle_orientation
+
+Table 4 : formation_element
+---------------------------
+Nom de table : formation_element
+Description : fait atomique pédagogique ou informationnel.
+Exemples : module, cours, compétence, métier, certification, langue, mobilité, information.
+Colonnes principales :
+- id
+- formation_id (nullable, FK vers formation.id)
+- specialisation_id (nullable)
+- parent_id (nullable, hiérarchie optionnelle)
+- type_element
+- code
+- nom
+- description
+- organisme
+- ordre_affichage
+- source_ref
+- actif
+
+Types d’éléments supportés :
+- MODULE
+- COURS
+- CONTENU_PROGRAMME
+- COMPETENCE
+- METIER
+- DOMAINE_ACTIVITE
+- CERTIFICATION
+- LANGUE
+- MOBILITE
+- OUTIL
+- OPPORTUNITE
+- INFORMATION
+
+Relation :
+- formation_element peut être global à une formation ou spécifique à une spécialisation
+- formation_element peut avoir un parent_id pour organiser des sous-éléments
+- 1 formation -> plusieurs formation_element
+- 1 specialisation -> plusieurs formation_element
+
+Table 5 : tarif
+---------------
+Nom de table : tarif
+Description : frais de scolarité et échéancier indicatif ou confirmé.
+Colonnes principales :
+- id
+- formation_id (FK vers formation.id)
+- specialisation_id (nullable)
+- frais_inscription
+- mensualite
+- nb_mensualites
+- langue_enseignement
+- devise
+- annee_universitaire
+- statut
+- remarque
+- source_ref
+- actif
+
+Relation :
+- 1 formation -> plusieurs tarifs
+- 1 specialisation -> plusieurs tarifs
+
+Table 6 : regle_orientation
+---------------------------
+Nom de table : regle_orientation
+Description : critères d’admission ou règles de recommandation utilisées par le chatbot (dans la logique métier).
+Colonnes principales :
+- id
+- formation_id (FK vers formation.id)
+- specialisation_id (nullable)
+- code (unique)
+- nom
+- type_regle
+- criteres (JSONB)
+- description
+- priorite
+- source_ref
+- actif
+
+Relation :
+- 1 formation -> plusieurs règles d’orientation
+- 1 spécialisation -> plusieurs règles
+
+Nécessaire pour :
+- éligibilité selon profil étudiant,
+- recommandation de parcours,
+- diagnostic d’orientation.
+
+Table 7 : accreditation
+-----------------------
+Nom de table : accreditation
+Description : label, organisme, reconnaissance de programme.
+Colonnes principales :
+- id
+- formation_id (FK vers formation.id)
+- code
+- nom
+- organisme
+- description
+- date_debut
+- date_fin
+- source_ref
+
+Relation :
+- 1 formation -> plusieurs accréditations
+
+
+RELATION GLOBALE
+----------------
+Schéma conceptuel :
+
+parcours
+  └── formation
+        ├── specialisation
+        │     ├── formation_element
+        │     ├── tarif
+        │     └── regle_orientation
+        │
+        ├── formation_element
+        ├── tarif
+        ├── regle_orientation
+        └── accreditation
+
+Principe important :
+- la base académique est la source de vérité pour le catalogue public et le back-office,
+- les écrans lisent cette base et n’inventent pas leurs propres règles hardcodées,
+- l’admin CRUD permet de modifier les données sans toucher le code applicatif.
+
+
+2) ARCHITECTURE LOGIQUE BACKEND
+--------------------------------
+
+Le backend est organisé comme suit :
+
+- app/models/sqlalchemy/academic.py
+  -> mappings SQLAlchemy des tables académiques
+
+- app/repositories/academic/
+  -> accès DB, pagination, filtres, queries
+
+- app/services/academic/catalog_service.py
+  -> façade qui lit le catalogue académique
+
+- app/api/routers/admin/
+  -> endpoints CRUD du back-office
+
+- app/api/routers/chat.py
+  -> endpoint public du chat
+
+- app/core/config.py
+  -> configuration environnement (DB, JWT, etc.)
+
+Les repos majeurs :
+- FormationRepository
+- ParcoursRepository
+- SpecialisationRepository
+- FormationElementRepository
+- TarifRepository
+- OrientationRuleRepository
+- AccreditationRepository
+
+La logique de pagination est centralisée dans :
+- app/repositories/academic/base.py
+
+Les routes admin sont générées principalement via :
+- app/api/routers/admin/crud_factory.py
+
+
+3) INTERFACES / PAGES FRONTEND
+------------------------------
+
+Le frontend est structuré en pages et sections. Les fichiers principaux sont dans :
+- frontend/src/App.tsx
+- frontend/src/pages/
+- frontend/src/features/admin/
+- frontend/src/layouts/
+
+A) Page publique : ChatPage
+---------------------------
+Fichier : frontend/src/pages/ChatPage.tsx
+Contenu principal :
+- zone de conversation
+- messages utilisateur / assistant
+- suggestions de questions
+- bouton pour recommencer une discussion
+- état de connexion / hors ligne
+- zone de saisie texte multi-ligne
+- gestion de retry si l’assistant échoue
+
+Objectif UX :
+- interface simple, directe, conversationnelle
+- centré sur les questions d’orientation / admission / frais
+
+B) Page admin : AdminDashboardPage
+-----------------------------------
+Fichier : frontend/src/pages/AdminDashboardPage.tsx
+Contenu principal :
+- header avec vue globale
+- lien pour ouvrir l’assistant publique
+- carte de diagnostic d’orientation
+- carte de vue académique complète
+- grille des ressources admin : parcours, formations, spécialisations, éléments, tarifs, règles, accréditations
+- compteurs de chaque ressource
+
+Objectif UX :
+- centraliser le contrôle du catalogue académique
+- montrer immédiatement ce qui est présent / absent dans la base
+
+C) Page admin : AcademicOverviewPage
+-------------------------------------
+Fichier : frontend/src/pages/AcademicOverviewPage.tsx
+Contenu principal :
+- fiche de formation détaillée
+- parcours / formation / description
+- durée, diplôme, semestres, crédits, langues, source
+- liste des spécialisations
+- groupes d’éléments par type : matières, compétences, métiers, certifications, informations, etc.
+- règles d’admission
+- tarifs par formation / spécialisation
+- accréditations
+- aperçus de documents de catalogue
+
+Objectif UX :
+- donner une vue complète d’une formation et de son contenu de base
+- aider à valider la cohérence de la donnée sans ouvrir les tables SQL directement
+
+D) Page admin : OrientationMatrixPage
+-------------------------------------
+Fichier : frontend/src/pages/OrientationMatrixPage.tsx
+Contenu principal :
+- profil étudiant (ex. bac scientifique, bac math, etc.)
+- statut d’éligibilité par formation
+- recommandation chatbot
+- cases admissible / non admissible / données insuffisantes
+- diagnostics de qualité : règles manquantes, tarifs manquants, informations incomplètes
+
+Objectif UX :
+- comparer la logique académique et la logique de recommandation
+- détecter les anomalies de données avant publication
+
+E) Pages CRUD génériques admin
+------------------------------
+Fichier : frontend/src/features/admin/entityConfig.ts
+Description :
+- configuration de chaque ressource admin
+- champs de formulaire par table
+- colonnes de tableau
+- filtres de formation / spécialisation
+- validation de champs
+
+Ressources configurées :
+- parcours
+- formations
+- specialisations
+- elements
+- tarifs
+- orientation-rules
+- accreditations
+
+Ces pages sont générées via :
+- frontend/src/features/admin/CrudPage.tsx
+- entityConfigList
+
+Objectif UX :
+- permettre de modifier les données sans coder une page manuelle par table
+- uniformiser les écrans de gestion
+
+F) Pages d’authentification et sécurité
+--------------------------------------
+Fichiers :
+- frontend/src/pages/LoginPage.tsx
+- frontend/src/features/auth/ProtectedRoute.tsx
+- frontend/src/layouts/AdminLayout.tsx
+
+Contenu principal :
+- connexion admin
+- protection des routes admin
+- navigation du back-office
+- menu latéral des ressources
+
+Objectif UX :
+- sécuriser le gestionnaire de contenu académique
+- séparer le front public du front admin
+
+G) Pages utilitaires
+--------------------
+- NotFoundPage.tsx
+- éventuellement layouts PublicLayout / AdminLayout
+
+Rôle :
+- gestion des erreurs de navigation
+- structure visuelle commune de pages
+
+
+4) MODÈLE DE DONNÉES ET POINTS DE MODIFICATION
+----------------------------------------------
+
+Les données les plus importantes pour améliorer UI/UX sont :
+
+- parcours
+  -> structure du parcours global
+
+- formation
+  -> fait la liste des diplômes / programmes visibles
+
+- specialisation
+  -> options par formation
+
+- formation_element
+  -> contenu réel à afficher dans les fiches
+
+- tarif
+  -> coût visible côté public
+
+- regle_orientation
+  -> logique d’admission et recommandation
+
+- accreditation
+  -> crédibilité / reconnaissance
+
+En pratique, pour améliorer la UX, les points les plus critiques sont :
+- cohérence des libellés et descriptions,
+- ordre d’affichage des éléments,
+- qualité des textes d’information,
+- structure hiérarchique des formations / spécialisations,
+- clarté des règles d’admission,
+- cohérence visuelle des pages de fiches académiques.
+
+
+5) POINTS STRATÉGIQUES POUR AMÉLIORER LE UX
+--------------------------------------------
+
+1. Centraliser la donnée dans la base et limiter le hardcoding
+2. Rendre les pages admin plus lisibles pour les non-techniques
+3. Ajouter des filtres sur les formations / spécialités / parcours
+4. Uniformiser les libellés affichés au public et en admin
+5. Ajouter une meilleure hiérarchie visuelle sur les fiches de formation
+6. Ajouter des états visuels : inactif, manquant, incomplet, actif
+7. Montrer plus clairement la différence entre :
+   - information académique,
+   - règle d’admission,
+   - tarif,
+   - accreditation,
+   - compétence / métier / module
+
+
+6) RÉSUMÉ COURT
+---------------
+La base académique est structurée autour de :
+- parcours -> formation -> spécialisation -> éléments
+- autour de cela, viennent les tarifs, règles et accréditations
+
+Les pages admin existent déjà pour gérer cette donnée de manière cohérente :
+- Dashboard
+- Overview
+- Matrix d’orientation
+- CRUD générique sur chaque table
+
+Le point central de l’amélioration UI/UX est donc :
+- mieux organiser la donnée existante,
+- mieux hiérarchiser l’information,
+- mieux rendre lisible la fiche d’une formation,
+- mieux exposer les différences entre “contenu”, “règle”, “tarif”, “reconnaissance”.
+
+
+Fin du document.

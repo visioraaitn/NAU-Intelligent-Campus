@@ -57,6 +57,7 @@ class Settings(BaseSettings):
     chroma_collection: str = "iit_academic_v1"
 
     inference_base_url: str = "http://inference:8010"
+    speech_inference_base_url: str = "http://speech-inference:8011"
     inference_service_token: SecretStr = SecretStr("change-me")
     inference_timeout_seconds: float = Field(default=90.0, ge=1.0, le=600.0)
 
@@ -72,6 +73,8 @@ class Settings(BaseSettings):
     trusted_hosts: CsvList = ["localhost", "127.0.0.1", "backend"]
     max_request_bytes: int = Field(default=32_768, ge=1_024, le=1_048_576)
     chat_rate_limit_per_minute: int = Field(default=20, ge=1, le=1_000)
+    speech_max_upload_bytes: int = Field(default=15_728_640, ge=1_048_576, le=52_428_800)
+    speech_rate_limit_per_minute: int = Field(default=10, ge=1, le=100)
     admin_rate_limit_per_minute: int = Field(default=60, ge=1, le=1_000)
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = "INFO"
     log_raw_messages: bool = False

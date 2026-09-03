@@ -71,6 +71,7 @@ class SubjectState(BaseModel):
     recommended_offer: str | None = None
     recommended_specialisation: str | None = None
     pending_slot: str | None = None
+    pending_action: str | None = None
     asked_slots: dict[str, int] = Field(default_factory=dict)
     rejected_slots: list[str] = Field(default_factory=list, max_length=32)
     rejected_offers: list[str] = Field(default_factory=list, max_length=64)
@@ -84,6 +85,7 @@ class SubjectState(BaseModel):
     covered_topics: list[str] = Field(default_factory=list, max_length=64)
     detail_level: int = Field(default=0, ge=0, le=5)
     finishing_current_degree: bool = False
+    pre_registration_completed: bool = False
     profile_intro_done: bool = False
     offer_intro_done: bool = False
     last_answer_text: str = ""
@@ -119,4 +121,3 @@ class ConversationState(BaseModel):
 
     def touch(self) -> None:
         self.updated_at = datetime.now(UTC)
-

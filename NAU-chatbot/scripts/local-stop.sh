@@ -8,7 +8,7 @@ env_value() {
   awk -F= -v key="$1" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' .env
 }
 
-for session in nau-frontend nau-backend nau-worker nau-inference nau-chroma; do
+for session in nau-frontend nau-backend nau-worker nau-speech nau-inference nau-chroma; do
   tmux kill-session -t "$session" 2>/dev/null || true
 done
 

@@ -7,6 +7,7 @@ from enum import Enum
 from typing import Any, Generic, TypeVar, cast
 from uuid import UUID
 
+from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -29,6 +30,7 @@ from app.repositories.academic import (
     SpecialisationRepository,
     TarifRepository,
 )
+from app.models.sqlalchemy import Specialisation
 
 
 logger = logging.getLogger(__name__)
@@ -94,6 +96,7 @@ class AcademicAdminService:
         repository = self.repository(entity_type)
         try:
             async with self.session.begin():
+                await self._validate_scoped_values(entity_type, values)
                 entity = await repository.create(values)
                 entity_id = int(getattr(entity, "id"))
                 formation_ids = await self._affected_formation_ids(entity_type, entity)
@@ -124,6 +127,11 @@ class AcademicAdminService:
                 )
                 was_active = bool(getattr(entity, "actif"))
                 before = await self._affected_formation_ids(entity_type, entity)
+                merged_values = {
+                    name: values.get(name, getattr(entity, name, None))
+                    for name in ("parcours_id", "formation_id", "specialisation_id")
+                }
+                await self._validate_scoped_values(entity_type, merged_values)
                 entity = await repository.update(entity, values)
                 is_active = bool(getattr(entity, "actif"))
                 after = await self._affected_formation_ids(entity_type, entity)
@@ -234,6 +242,43 @@ class AcademicAdminService:
             return tuple(ids) or (None,)
         formation_id = getattr(entity, "formation_id", None)
         return (None if formation_id is None else int(formation_id),)
+
+    async def _validate_scoped_values(
+        self,
+        entity_type: AcademicEntityType,
+        values: Mapping[str, Any],
+    ) -> None:
+        if entity_type not in {
+            AcademicEntityType.FORMATION_ELEMENT,
+            AcademicEntityType.TARIF,
+        }:
+            return
+        parcours_id = values.get("parcours_id")
+        formation_id = values.get("formation_id")
+        specialisation_id = values.get("specialisation_id")
+        if parcours_id is not None and (
+            formation_id is not None or specialisation_id is not None
+        ):
+            raise ConflictError(
+                "Une donnée ne peut pas appartenir simultanément à un cycle et à une formation."
+            )
+        if entity_type is AcademicEntityType.TARIF and parcours_id is None and formation_id is None:
+            raise ConflictError("Un tarif doit appartenir à un cycle ou à une formation.")
+        if specialisation_id is None:
+            return
+        if formation_id is None:
+            raise ConflictError(
+                "Une spécialisation doit toujours être associée à sa formation."
+            )
+        actual_formation_id = await self.session.scalar(
+            select(Specialisation.formation_id).where(
+                Specialisation.id == int(specialisation_id)
+            )
+        )
+        if actual_formation_id is None or int(actual_formation_id) != int(formation_id):
+            raise ConflictError(
+                "La spécialisation sélectionnée n’appartient pas à cette formation."
+            )
 
     @staticmethod
     def _events(

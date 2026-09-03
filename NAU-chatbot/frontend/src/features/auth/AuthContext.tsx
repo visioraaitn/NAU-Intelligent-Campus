@@ -9,6 +9,7 @@ import {
 } from "react";
 import { authApi } from "../../api/auth";
 import { configureTokenRefresh, setAccessToken } from "../../api/http";
+import type { AuthUser, SignupRequest } from "../../types/auth";
 
 let refreshInFlight: ReturnType<typeof authApi.refresh> | null = null;
 
@@ -17,7 +18,9 @@ type AuthStatus = "checking" | "authenticated" | "anonymous";
 interface AuthContextValue {
   status: AuthStatus;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  user: AuthUser | null;
+  login: (username: string, password: string) => Promise<AuthUser>;
+  signup: (payload: SignupRequest) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 
@@ -45,9 +48,11 @@ function requestTokenRefresh(csrfToken: string) {
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>("checking");
+  const [user, setUser] = useState<AuthUser | null>(null);
 
   const clearSession = useCallback(() => {
     setAccessToken(null);
+    setUser(null);
     setStatus("anonymous");
   }, []);
 
@@ -60,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await requestTokenRefresh(csrfToken);
       setAccessToken(response.access_token);
+      setUser(response.user);
       setStatus("authenticated");
       return response.access_token;
     } catch {
@@ -77,7 +83,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (username: string, password: string) => {
     const response = await authApi.login({ username, password });
     setAccessToken(response.access_token);
+    setUser(response.user);
     setStatus("authenticated");
+    return response.user;
+  }, []);
+
+  const signup = useCallback(async (payload: SignupRequest) => {
+    const response = await authApi.signup(payload);
+    setAccessToken(response.access_token);
+    setUser(response.user);
+    setStatus("authenticated");
+    return response.user;
   }, []);
 
   const logout = useCallback(async () => {
@@ -90,8 +106,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [clearSession]);
 
   const value = useMemo<AuthContextValue>(
-    () => ({ status, isAuthenticated: status === "authenticated", login, logout }),
-    [login, logout, status],
+    () => ({ status, isAuthenticated: status === "authenticated", user, login, signup, logout }),
+    [login, logout, signup, status, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

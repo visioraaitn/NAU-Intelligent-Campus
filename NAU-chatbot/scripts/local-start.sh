@@ -18,6 +18,8 @@ POSTGRES_BIN="$ROOT_DIR/.runtime/postgres/usr/lib/postgresql/16/bin"
 POSTGRES_DATA="$ROOT_DIR/.runtime/data/postgres"
 REDIS_BIN="$ROOT_DIR/.runtime/redis/usr/bin"
 REDIS_LIB="$ROOT_DIR/.runtime/redis/usr/lib/x86_64-linux-gnu"
+SPEECH_FFMPEG_LIB="$ROOT_DIR/.runtime/ffmpeg-libs/root/usr/lib/x86_64-linux-gnu"
+SPEECH_TORCH_LIB="$ROOT_DIR/backend/.speech-venv/lib/python3.12/site-packages/torch/lib"
 
 mkdir -p .runtime/logs .runtime/pids
 
@@ -46,6 +48,7 @@ start_session() {
 
 start_session nau-chroma "$ROOT_DIR" "exec env ANONYMIZED_TELEMETRY=FALSE backend/.venv/bin/chroma run --path '$ROOT_DIR/.runtime/data/chroma' --host 127.0.0.1 --port 8001 >> '$ROOT_DIR/.runtime/logs/chroma.log' 2>&1"
 start_session nau-inference "$ROOT_DIR" "exec env PYTHONPATH=backend HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 backend/.inference-venv/bin/uvicorn app.infrastructure.inference.server:app --host 127.0.0.1 --port 8010 --workers 1 --no-access-log >> '$ROOT_DIR/.runtime/logs/inference.log' 2>&1"
+start_session nau-speech "$ROOT_DIR" "exec env PYTHONPATH=backend HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 LD_LIBRARY_PATH='$SPEECH_TORCH_LIB:$SPEECH_FFMPEG_LIB' backend/.speech-venv/bin/uvicorn app.infrastructure.inference.speech_server:app --host 127.0.0.1 --port 8011 --workers 1 --no-access-log >> '$ROOT_DIR/.runtime/logs/speech.log' 2>&1"
 start_session nau-worker "$ROOT_DIR" "exec env PYTHONPATH=backend ANONYMIZED_TELEMETRY=FALSE backend/.venv/bin/python -m app.workers.rag_worker >> '$ROOT_DIR/.runtime/logs/worker.log' 2>&1"
 start_session nau-backend "$ROOT_DIR" "exec env PYTHONPATH=backend ANONYMIZED_TELEMETRY=FALSE backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 >> '$ROOT_DIR/.runtime/logs/backend.log' 2>&1"
 start_session nau-frontend "$ROOT_DIR/frontend" "exec npm run preview -- --host 0.0.0.0 --port 5173 >> '$ROOT_DIR/.runtime/logs/frontend.log' 2>&1"

@@ -7,7 +7,7 @@ patterns:
     - '\b(mon frere|ma soeur|mon fils|ma fille|pour mon fils|pour ma fille|benti|khouya|okhti)\b'
     - '(?<!ya )\bweldi\b'
   self:
-    - '\b(moi|pour moi|ena|je suis|j ai|j''ai|i have|i am)\b'
+    - '\b(moi|pour moi|ena|je suis|j ai|j''ai|i have|i am)\b|(?:^|\s)(?:انا|آنا)(?:\s|$)'
   master:
     - '\b(master|mast[eè]re)\b'
   licence:
@@ -15,12 +15,14 @@ patterns:
   prepa:
     - '\b(pr[eé]pa|preparatoire|préparatoire)\b'
   bac:
-    - '\bbac(calaur[eé]at)?\b'
+    - '\bbac(calaur[eé]at)?\b|(?:^|\s)(?:الباك|باك)(?:\s|$)'
   licence_holder:
-    - '\b(j''ai|j ai|ena|andi|3andi).*(licence|licenci[eé])\b'
+    - '\b(j''ai|j ai|andi|3andi)\s+(?:une?\s+)?(licence|licenci[eé])\b'
+    - '\b(titulaire|dipl[oô]m[eé]).*(licence|licenci[eé])\b'
     - '\b(i have|i hold).*(licence|license|bachelor)\b'
   licence_student:
     - '\b(en licence|na9ra licence|étudiant en licence|etudiant en licence)\b'
+    - '\b(ena|je suis)\s+(?:en\s+)?licence\b'
   prepa_holder:
     - '\b(j''ai fini|j ai fini|dipl[oô]m[eé]|termin[eé]).*(pr[eé]pa|preparatoire)\b'
   prepa_student:
@@ -33,15 +35,19 @@ patterns:
     - '\blicence(?:\s+en)?\s+(?P<value>[a-z0-9 éèêàâîïôûç''-]{2,80})'
   finishing:
     - '\b(je termine|je finis|derniere annee|dernière année|bientot diplome|bientôt diplômé)\b'
+  pre_registration_completed:
+    - '\b(?:(?:j(?:''|\s)?ai\s+)?(?:deja\s+)?fait|(?:c(?:''|\s)?est\s+bon\s+)?3?amlt|termine)\s+(?:la\s+)?pr[eé][ -]?inscri\w*\b'
+    - '\bpr[eé][ -]?inscri\w*\s+(?:est\s+)?(?:deja\s+)?faite?\b'
   correction:
     - '\b(en fait|correction|je me suis trompe|je me suis trompé|non je suis)\b'
   pending_bac_level:
     - '^\s*(?P<average>\d{1,2}(?:[.,]\d+)?)\s*(?:w|et|,)\s*(?P<math>\d{1,2}(?:[.,]\d+)?)\s*$'
 terms:
   capture_stop: [ena, je suis, j ai, je veux, je souhaite, i am, i have, nheb, na9ra, bech, bich, pour, afin, et, nkamel, tansahni, tensahni]
-  bac_math: [bac math, mathématiques, mathematiques]
-  bac_sciences: [bac sciences, sciences expérimentales, sciences experimentales]
-  bac_info: [bac info, bac informatique]
-  bac_technique: [bac technique, technique]
-  bac_eco: [bac eco, economie, économie, gestion]
+  bac_math: [bac math, mathématiques, mathematiques, باك رياضيات, الباك رياضيات]
+  bac_sciences: [bac sciences, sciences expérimentales, sciences experimentales, باك علوم, الباك علوم]
+  bac_info: [bac info, bac informatique, باك إعلامية, الباك إعلامية]
+  bac_technique: [bac technique, technique, باك تقنية, الباك تقنية]
+  bac_eco: [bac eco, economie, économie, gestion, باك اقتصاد وتصرف, الباك اقتصاد وتصرف]
+  bac_letters: [bac lettre, bac lettres, bac litteraire, bac littéraire, lettres, litteraire, littéraire, باك آداب, الباك آداب]
   bac_sport: [bac sport, sport]

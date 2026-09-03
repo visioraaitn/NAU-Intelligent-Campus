@@ -1,9 +1,18 @@
-import type { LoginRequest, LogoutResponse, TokenResponse } from "../types/auth";
+import type { LoginRequest, LogoutResponse, SignupRequest, TokenResponse } from "../types/auth";
 import { apiRequest } from "./http";
 
 export const authApi = {
   login(payload: LoginRequest): Promise<TokenResponse> {
     return apiRequest<TokenResponse>("/auth/login", {
+      method: "POST",
+      body: payload,
+      auth: false,
+      retryAuth: false,
+    });
+  },
+
+  signup(payload: SignupRequest): Promise<TokenResponse> {
+    return apiRequest<TokenResponse>("/auth/signup", {
       method: "POST",
       body: payload,
       auth: false,

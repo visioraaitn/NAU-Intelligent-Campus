@@ -10,10 +10,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 
-from app.api.routers import auth, chat, health
+from app.api.routers import auth, chat, conversations, health, speech
 from app.api.routers.admin import (
     accreditations_router,
     academic_overview_router,
+    cycle_overview_router,
     elements_router,
     formations_router,
     orientation_matrix_router,
@@ -31,10 +32,9 @@ from app.core.middleware import (
     RequestSizeLimitMiddleware,
     SecurityHeadersMiddleware,
 )
-from app.core.security import AuthService
 from app.infrastructure.chroma import AsyncChromaRepository
 from app.infrastructure.db import close_database
-from app.infrastructure.inference import HttpInferenceClient
+from app.infrastructure.inference import HttpInferenceClient, HttpSpeechClient
 from app.infrastructure.redis import close_redis, get_redis
 
 
@@ -47,12 +47,13 @@ async def lifespan(application: FastAPI) -> AsyncIterator[None]:
     validate_runtime_settings(settings)
     configure_logging(settings)
     application.state.inference = HttpInferenceClient(settings)
+    application.state.speech_inference = HttpSpeechClient(settings)
     application.state.chroma = AsyncChromaRepository(settings)
-    application.state.auth = AuthService(get_redis(), settings)
     try:
         yield
     finally:
         await application.state.inference.close()
+        await application.state.speech_inference.close()
         await close_database()
         await close_redis()
 
@@ -81,7 +82,15 @@ app.add_middleware(
 )
 app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.trusted_hosts)
 app.add_middleware(SecurityHeadersMiddleware)
-app.add_middleware(RequestSizeLimitMiddleware, max_bytes=settings.max_request_bytes)
+app.add_middleware(
+    RequestSizeLimitMiddleware,
+    max_bytes=settings.max_request_bytes,
+    path_limits={
+        f"{settings.api_v1_prefix}/speech/transcribe": (
+            settings.speech_max_upload_bytes + settings.max_request_bytes
+        ),
+    },
+)
 app.add_middleware(RequestIdMiddleware)
 
 
@@ -180,7 +189,10 @@ app.include_router(health.router)
 for api_router in (
     auth.router,
     chat.router,
+    conversations.router,
+    speech.router,
     academic_overview_router,
+    cycle_overview_router,
     parcours_router,
     formations_router,
     orientation_matrix_router,

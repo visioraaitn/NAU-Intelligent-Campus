@@ -12,9 +12,12 @@ from app.services.dialogue.normalizer import contains_phrase, fold_text
 class PendingSlotResult:
     parsed: bool = False
     previous_intents: tuple[str, ...] = ()
+    forced_intents: tuple[str, ...] = ()
 
 
 class PendingSlotResolver:
+    AFFIRMATIVE_PATTERN = re.compile(r"^(?:oui+|yes|ey+|eey+|behi|d'accord|ok+)$", re.I)
+
     def __init__(self) -> None:
         self.pair_patterns = [
             re.compile(value, re.I)
@@ -22,11 +25,20 @@ class PendingSlotResolver:
         ]
 
     def resolve(self, message: str, state: SubjectState) -> PendingSlotResult:
+        folded = fold_text(message).strip()
+        if state.pending_action:
+            action = state.pending_action
+            state.pending_action = None
+            if self.is_affirmative(folded):
+                return PendingSlotResult(
+                    parsed=True,
+                    previous_intents=tuple(state.last_intents),
+                    forced_intents=(action,),
+                )
         slot = state.pending_slot
         if not slot:
             return PendingSlotResult()
         previous = tuple(state.last_intents)
-        folded = fold_text(message)
         parsed_slots = {
             "PROFILE": state.profile is not AcademicProfile.UNKNOWN,
             "BAC_SPECIALTY": bool(state.bac_specialty),
@@ -38,12 +50,13 @@ class PendingSlotResolver:
             return PendingSlotResult(True, previous)
         if slot == "BAC_SPECIALTY":
             aliases = (
-                ("MATH", ("math", "maths", "mathematiques")),
-                ("SCIENCES", ("science", "sciences", "sciences experimentales")),
-                ("INFORMATIQUE", ("info", "informatique")),
-                ("TECHNIQUE", ("technique", "sciences techniques")),
-                ("ECONOMIE_GESTION", ("eco", "economie", "gestion")),
-                ("SPORT", ("sport",)),
+                ("MATH", ("math", "maths", "mathematiques", "رياضيات")),
+                ("SCIENCES", ("science", "sciences", "sciences experimentales", "علوم")),
+                ("INFORMATIQUE", ("info", "informatique", "اعلامية", "إعلامية")),
+                ("TECHNIQUE", ("technique", "sciences techniques", "تقنية")),
+                ("ECONOMIE_GESTION", ("eco", "economie", "gestion", "اقتصاد", "تصرف")),
+                ("LETTERS", ("lettre", "lettres", "litteraire", "آداب")),
+                ("SPORT", ("sport", "رياضة")),
             )
             specialty = next(
                 (
@@ -69,3 +82,7 @@ class PendingSlotResolver:
                     state.pending_slot = None
                     return PendingSlotResult(True, previous)
         return PendingSlotResult(False, previous)
+
+    @classmethod
+    def is_affirmative(cls, message: str) -> bool:
+        return bool(cls.AFFIRMATIVE_PATTERN.fullmatch(fold_text(message).strip()))

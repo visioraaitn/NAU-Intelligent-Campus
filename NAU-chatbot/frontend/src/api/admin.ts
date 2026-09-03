@@ -1,6 +1,7 @@
 import type { Page } from "../types/api";
 import type {
   AcademicEntity,
+  AcademicCycleOverviewResponse,
   AcademicOverviewResponse,
   AcademicResource,
   MutationResponse,
@@ -15,6 +16,7 @@ export interface AdminListParams {
   pageSize?: number;
   search?: string;
   includeInactive?: boolean;
+  parcoursId?: number;
   formationId?: number;
   specialisationId?: number;
 }
@@ -25,6 +27,7 @@ function listQuery(params: AdminListParams): string {
   query.set("page_size", String(params.pageSize ?? 20));
   if (params.search?.trim()) query.set("search", params.search.trim());
   if (params.includeInactive) query.set("include_inactive", "true");
+  if (params.parcoursId) query.set("parcours_id", String(params.parcoursId));
   if (params.formationId) query.set("formation_id", String(params.formationId));
   if (params.specialisationId) query.set("specialisation_id", String(params.specialisationId));
   return query.toString();
@@ -82,9 +85,21 @@ export const adminApi = {
     return apiRequest<OrientationMatrixResponse>("/admin/orientation-matrix");
   },
 
-  academicOverview(includeInactive = false): Promise<AcademicOverviewResponse> {
+  academicOverview(includeInactive = false, formationId?: number): Promise<AcademicOverviewResponse> {
+    const query = new URLSearchParams({
+      include_inactive: includeInactive ? "true" : "false",
+    });
+    if (formationId) query.set("formation_id", String(formationId));
     return apiRequest<AcademicOverviewResponse>(
-      `/admin/academic-overview?include_inactive=${includeInactive ? "true" : "false"}`,
+      `/admin/academic-overview?${query.toString()}`,
     );
+  },
+
+  cycleOverview(parcoursId: number, includeInactive = false): Promise<AcademicCycleOverviewResponse> {
+    const query = new URLSearchParams({
+      parcours_id: String(parcoursId),
+      include_inactive: includeInactive ? "true" : "false",
+    });
+    return apiRequest<AcademicCycleOverviewResponse>(`/admin/cycle-overview?${query.toString()}`);
   },
 };

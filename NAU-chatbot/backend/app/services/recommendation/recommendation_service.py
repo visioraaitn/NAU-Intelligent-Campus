@@ -39,6 +39,7 @@ class RecommendationService:
         parcours_codes = {item.id: item.code for item in parcours_page.items}
         formations_page = await self.catalogue.formations.list(PageRequest(page_size=100))
         candidates: list[RecommendationOption] = []
+        formation_parcours_codes: dict[int, str] = {}
         has_specific_interests = any(
             interest != "GENERAL_INFO" for interest in subject.interests
         )
@@ -46,6 +47,7 @@ class RecommendationService:
             parcours_code = parcours_codes.get(formation.parcours_id)
             if parcours_code not in allowed_parcours:
                 continue
+            formation_parcours_codes[formation.id] = parcours_code
             if not self._formation_matches_academic_domain(subject, formation.code):
                 continue
             formation_identity = fold_text(
@@ -101,13 +103,6 @@ class RecommendationService:
                 }.get(subject.target or "")
                 if normalized_target and parcours_code == normalized_target:
                     score += 2.0
-                if (
-                    subject.profile is AcademicProfile.NEW_BAC
-                    and subject.bac_specialty in {"MATH", "SCIENCES"}
-                    and subject.target != "LICENCE"
-                    and parcours_code == "PREPA"
-                ):
-                    score += 3.0
                 candidates.append(
                     RecommendationOption(
                         formation.id,
@@ -132,6 +127,11 @@ class RecommendationService:
             return RecommendationDecision(None, None)
         candidates.sort(
             key=lambda item: (
+                self._parcours_priority(
+                    subject,
+                    formation_parcours_codes.get(item.formation_id),
+                ),
+                self._formation_priority(subject, item.formation_code),
                 -item.score,
                 item.formation_code,
                 item.specialisation_code or "",
@@ -163,9 +163,14 @@ class RecommendationService:
             not in {candidate.formation_id for candidate in candidates[1:index + 1]}
         )
         label = primary.specialisation_name or primary.formation_name
-        if subject.profile is AcademicProfile.NEW_BAC and subject.bac_specialty in {"MATH", "SCIENCES"}:
+        primary_parcours = formation_parcours_codes.get(primary.formation_id)
+        if subject.profile is AcademicProfile.NEW_BAC and primary_parcours == "LICENCE":
             reasons = [
-                f"Avec ce bac scientifique, {label} est la voie prioritaire vers un cycle ingénieur; les licences admissibles restent des alternatives à comparer."
+                f"Avec cette section de bac, {label} fait partie des licences admissibles à explorer en priorité."
+            ]
+        elif subject.profile is AcademicProfile.NEW_BAC and primary_parcours == "PREPA":
+            reasons = [
+                f"{label} est compatible avec cette section de bac et correspond à l'objectif Prépa exprimé."
             ]
         elif subject.profile is AcademicProfile.NEW_BAC:
             reasons = [
@@ -188,6 +193,32 @@ class RecommendationService:
             provisional=not has_specific_interests,
             alternatives=alternatives,
         )
+
+    @staticmethod
+    def _parcours_priority(
+        subject: SubjectState,
+        parcours_code: str | None,
+    ) -> int:
+        if subject.profile is not AcademicProfile.NEW_BAC:
+            return 0
+        if subject.target == "PREPA":
+            order = {"PREPA": 0, "LICENCE": 1}
+        else:
+            order = {"LICENCE": 0, "PREPA": 1}
+        return order.get(parcours_code or "", 2)
+
+    @staticmethod
+    def _formation_priority(subject: SubjectState, formation_code: str) -> int:
+        if subject.profile is not AcademicProfile.NEW_BAC:
+            return 0
+        if subject.bac_specialty == "TECHNIQUE":
+            order = {
+                "LICENCE_MECATRONIQUE_SI": 0,
+                "LICENCE_INFO": 1,
+            }
+        else:
+            order = {"LICENCE_INFO": 0}
+        return order.get(formation_code, 2)
 
     @staticmethod
     def _allowed_parcours(subject: SubjectState) -> set[str] | None:

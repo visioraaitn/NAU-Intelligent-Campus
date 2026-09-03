@@ -27,6 +27,8 @@ class FormationElementType(_StringEnum):
     OUTIL = "OUTIL"
     OPPORTUNITE = "OPPORTUNITE"
     INFORMATION = "INFORMATION"
+    DOCUMENT_INSCRIPTION = "DOCUMENT_INSCRIPTION"
+    LIEN_PREINSCRIPTION = "LIEN_PREINSCRIPTION"
 
 
 class OrientationRuleType(_StringEnum):
@@ -41,5 +43,4 @@ class TarifStatus(_StringEnum):
 
     INDICATIF = "INDICATIF"
     CONFIRME = "CONFIRME"
-
 

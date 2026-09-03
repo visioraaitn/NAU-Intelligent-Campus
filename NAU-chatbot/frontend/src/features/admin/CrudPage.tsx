@@ -1,4 +1,5 @@
 import { type FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { adminApi } from "../../api/admin";
 import { ApiError } from "../../api/http";
 import { ConfirmDialog } from "../../components/ConfirmDialog";
@@ -11,7 +12,9 @@ import type { AcademicEntity } from "../../types/academic";
 import { errorMessage } from "../../utils/errors";
 import { CrudForm } from "./CrudForm";
 import { CrudTable } from "./CrudTable";
+import { AdminBreadcrumb, type BreadcrumbItem } from "./AdminBreadcrumb";
 import type { EntityConfig } from "./entityConfig";
+import { adminResourceUrl, queryValue, readPositiveId, updateQueryParams } from "./hierarchyQuery";
 import { useReferenceData } from "./useReferenceData";
 
 interface PendingAction {
@@ -26,13 +29,23 @@ function labelFor(entity: AcademicEntity, singular: string): string {
   return typeof label === "string" ? `« ${label} »` : `ce ${singular}`;
 }
 
+function entityName(entity: AcademicEntity | undefined): string {
+  return typeof entity?.nom === "string" ? entity.nom : "";
+}
+
 export function CrudPage({ config }: { config: EntityConfig }) {
+  const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [data, setData] = useState<Page<AcademicEntity>>(emptyPage);
   const [page, setPage] = useState(1);
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [includeInactive, setIncludeInactive] = useState(false);
-  const [formationId, setFormationId] = useState("");
+  const parcoursId = config.parcoursFilter ? readPositiveId(searchParams, "parcours_id") : "";
+  const [localFormationId, setLocalFormationId] = useState("");
+  const formationId = config.formationFilterInUrl
+    ? readPositiveId(searchParams, "formation_id")
+    : localFormationId;
   const [specialisationId, setSpecialisationId] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -53,6 +66,7 @@ export function CrudPage({ config }: { config: EntityConfig }) {
         pageSize: ADMIN_PAGE_SIZE,
         search,
         includeInactive,
+        parcoursId: parcoursId ? Number(parcoursId) : undefined,
         formationId: formationId ? Number(formationId) : undefined,
         specialisationId: specialisationId ? Number(specialisationId) : undefined,
       });
@@ -65,7 +79,7 @@ export function CrudPage({ config }: { config: EntityConfig }) {
     } finally {
       if (sequence === loadSequence.current) setLoading(false);
     }
-  }, [config.resource, formationId, includeInactive, page, search, specialisationId]);
+  }, [config.resource, formationId, includeInactive, page, parcoursId, search, specialisationId]);
 
   useEffect(() => {
     void load();
@@ -75,7 +89,7 @@ export function CrudPage({ config }: { config: EntityConfig }) {
     setPage(1);
     setSearchInput("");
     setSearch("");
-    setFormationId("");
+    setLocalFormationId("");
     setSpecialisationId("");
     setIncludeInactive(false);
     setEditing(undefined);
@@ -83,6 +97,36 @@ export function CrudPage({ config }: { config: EntityConfig }) {
   }, [config.resource]);
 
   const formations = references.formations ?? [];
+  const parcours = references.parcours ?? [];
+  const selectedFormation = formations.find((entry) => Number(entry.id) === Number(formationId));
+  const selectedParcours = parcours.find(
+    (entry) => Number(entry.id) === Number(selectedFormation?.parcours_id),
+  );
+  const contextualCreateValue = config.contextualCreate
+    ? readPositiveId(searchParams, config.contextualCreate.queryParam)
+    : "";
+  const breadcrumbItems: BreadcrumbItem[] = config.hierarchyContext && selectedFormation && selectedParcours
+    ? [
+      {
+        label: config.hierarchyContext.rootLabel,
+        to: adminResourceUrl(config.hierarchyContext.rootResource),
+      },
+      {
+        label: entityName(selectedParcours),
+        to: adminResourceUrl(config.hierarchyContext.parentResource, {
+          [config.hierarchyContext.parentFilterParam]: selectedParcours.id,
+        }),
+      },
+      {
+        label: entityName(selectedFormation),
+        to: adminResourceUrl(config.resource, {
+          [config.hierarchyContext.filterParam]: selectedFormation.id,
+          [config.hierarchyContext.parentFilterParam]: selectedParcours.id,
+        }),
+      },
+      { label: config.title },
+    ]
+    : [];
   const specialisations = useMemo(
     () => (references.specialisations ?? []).filter(
       (entry) => !formationId || Number(entry.formation_id) === Number(formationId),
@@ -95,6 +139,37 @@ export function CrudPage({ config }: { config: EntityConfig }) {
     setPage(1);
     setSearch(searchInput.trim());
   };
+
+  const openEntity = (entity: AcademicEntity) => {
+    const navigation = config.rowNavigation;
+    if (!navigation) return;
+    const value = entity[navigation.valueKey ?? "id"];
+    const params: Record<string, string | number | null | undefined> = {
+      [navigation.filterParam]: queryValue(value),
+    };
+    for (const context of navigation.contextParams ?? []) {
+      params[context.param] = queryValue(entity[context.valueKey]);
+    }
+    navigate(adminResourceUrl(navigation.resource, params));
+  };
+
+  const changeFormationFilter = (value: string) => {
+    if (!config.formationFilterInUrl) {
+      setLocalFormationId(value);
+      setSpecialisationId("");
+      setPage(1);
+      return;
+    }
+    const formation = formations.find((entry) => Number(entry.id) === Number(value));
+    setSearchParams(updateQueryParams(searchParams, {
+      formation_id: value,
+      parcours_id: queryValue(formation?.parcours_id),
+    }), { replace: true });
+    setSpecialisationId("");
+    setPage(1);
+  };
+
+  const startCreate = () => setEditing(null);
 
   const handleSave = async (payload: Record<string, unknown>) => {
     const result = editing
@@ -148,13 +223,19 @@ export function CrudPage({ config }: { config: EntityConfig }) {
 
   return (
     <section className="admin-page" aria-labelledby="entity-title">
+      {breadcrumbItems.length > 0 && <AdminBreadcrumb items={breadcrumbItems} />}
       <header className="page-heading">
         <div>
           <span className="eyebrow">Catalogue académique</span>
           <h1 id="entity-title">{config.title}</h1>
-          <p>{config.description}</p>
+          {selectedFormation && config.hierarchyContext ? (
+            <div className="entity-context-heading">
+              <strong>{entityName(selectedFormation)}</strong>
+              <span>{entityName(selectedParcours)}</span>
+            </div>
+          ) : <p>{config.description}</p>}
         </div>
-        <button className="button button--primary" type="button" onClick={() => setEditing(null)}>
+        <button className="button button--primary" type="button" onClick={startCreate}>
           <Icon name="plus" /> Ajouter
         </button>
       </header>
@@ -172,7 +253,7 @@ export function CrudPage({ config }: { config: EntityConfig }) {
       </div>
 
       <div className="admin-card">
-        <form className="crud-toolbar" onSubmit={submitSearch}>
+        <form className={`crud-toolbar ${selectedFormation && config.hierarchyContext ? "crud-toolbar--contextual" : ""}`} onSubmit={submitSearch}>
           <label className="search-field">
             <span className="sr-only">Rechercher</span>
             <Icon name="search" />
@@ -186,16 +267,33 @@ export function CrudPage({ config }: { config: EntityConfig }) {
           </label>
           <button className="button button--secondary button--compact" type="submit">Rechercher</button>
 
+          {config.parcoursFilter && (
+            <label className="toolbar-select">
+              <span className="sr-only">Filtrer par cycle académique</span>
+              <select
+                aria-label="Filtrer par cycle académique"
+                value={parcoursId}
+                onChange={(event) => {
+                  setSearchParams(updateQueryParams(searchParams, {
+                    parcours_id: event.target.value,
+                  }), { replace: true });
+                  setPage(1);
+                }}
+              >
+                <option value="">Tous les cycles académiques</option>
+                {parcours.map((entry) => (
+                  <option value={entry.id} key={entry.id}>{entry.nom}</option>
+                ))}
+              </select>
+            </label>
+          )}
+
           {config.formationFilter && (
             <label className="toolbar-select">
               <span className="sr-only">Filtrer par formation</span>
               <select
                 value={formationId}
-                onChange={(event) => {
-                  setFormationId(event.target.value);
-                  setSpecialisationId("");
-                  setPage(1);
-                }}
+                onChange={(event) => changeFormationFilter(event.target.value)}
               >
                 <option value="">Toutes les formations</option>
                 {formations.map((entry) => (
@@ -244,25 +342,34 @@ export function CrudPage({ config }: { config: EntityConfig }) {
           onEdit={(entity) => setEditing(entity)}
           onToggle={(entity) => setPendingAction({ kind: "toggle", entity })}
           onDelete={(entity) => setPendingAction({ kind: "delete", entity })}
+          onOpen={config.rowNavigation ? openEntity : undefined}
+          emptyMessage={selectedFormation ? config.filteredEmptyState?.message : undefined}
+          emptyActionLabel={selectedFormation ? config.filteredEmptyState?.actionLabel : undefined}
+          onCreate={config.filteredEmptyState ? startCreate : undefined}
         />
         <Pagination page={page} pageSize={data.limit || ADMIN_PAGE_SIZE} total={data.total} onPageChange={setPage} />
       </div>
 
       <Modal
         open={editing !== undefined}
-        title={editing ? `Modifier le ${config.singular}` : `Nouveau ${config.singular}`}
+        title={editing
+          ? config.editTitle ?? `Modifier le ${config.singular}`
+          : config.createTitle ?? `Nouveau ${config.singular}`}
         description="Les champs marqués d’un astérisque sont obligatoires."
         onClose={() => setEditing(undefined)}
         size="large"
       >
         {editing !== undefined && (
           <CrudForm
-            key={editing?.id ?? "new"}
+            key={editing?.id ?? `new-${contextualCreateValue}`}
             config={config}
             entity={editing}
             references={references}
             referencesLoading={referencesLoading}
             referencesError={referencesError}
+            initialValues={editing === null && config.contextualCreate && contextualCreateValue
+              ? { [config.contextualCreate.field]: contextualCreateValue }
+              : undefined}
             onCancel={() => setEditing(undefined)}
             onSubmit={handleSave}
           />

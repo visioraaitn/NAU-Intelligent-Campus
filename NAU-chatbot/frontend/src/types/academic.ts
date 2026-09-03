@@ -63,9 +63,12 @@ export type FormationElementType =
   | "MOBILITE"
   | "OUTIL"
   | "OPPORTUNITE"
-  | "INFORMATION";
+  | "INFORMATION"
+  | "DOCUMENT_INSCRIPTION"
+  | "LIEN_PREINSCRIPTION";
 
 export interface FormationElement extends AcademicEntity {
+  parcours_id: number | null;
   formation_id: number | null;
   specialisation_id: number | null;
   parent_id: number | null;
@@ -73,23 +76,49 @@ export interface FormationElement extends AcademicEntity {
   code: string | null;
   nom: string;
   description: string | null;
+  valeur: string | null;
   organisme: string | null;
   ordre_affichage: number | null;
   source_ref: string | null;
 }
 
+export type FormationElementScope = "GLOBAL" | "PARCOURS" | "FORMATION" | "SPECIALISATION";
+
+export interface EffectiveFormationElement {
+  element: FormationElement;
+  scope: FormationElementScope;
+}
+
 export interface Tarif extends AcademicEntity {
-  formation_id: number;
+  parcours_id: number | null;
+  formation_id: number | null;
   specialisation_id: number | null;
   frais_inscription: string | number | null;
   mensualite: string | number | null;
   nb_mensualites: number | null;
-  langue_enseignement: string;
+  langue_enseignement: string | null;
   devise: string;
   annee_universitaire: string | null;
   statut: string;
   remarque: string | null;
   source_ref: string | null;
+}
+
+export interface EffectiveTarif {
+  parcours_id: number;
+  formation_id: number;
+  specialisation_id: number | null;
+  langue_enseignement: string | null;
+  frais_inscription: string | number | null;
+  mensualite: string | number | null;
+  nb_mensualites: number | null;
+  devise: string;
+  annee_universitaire: string | null;
+  statut: string;
+  remarque: string | null;
+  source_ref: string | null;
+  field_origins: Record<string, FormationElementScope>;
+  source_tarif_ids: number[];
 }
 
 export interface OrientationRule extends AcademicEntity {
@@ -194,7 +223,9 @@ export interface AcademicFormationOverview {
   formation: Formation;
   specialisations: Specialisation[];
   elements: FormationElement[];
+  effective_elements: EffectiveFormationElement[];
   tarifs: Tarif[];
+  effective_tarifs: EffectiveTarif[];
   orientation_rules: OrientationRule[];
   accreditations: Accreditation[];
   rag_documents: RagDocumentPreview[];
@@ -204,4 +235,11 @@ export interface AcademicOverviewResponse {
   formations: AcademicFormationOverview[];
   global_elements: FormationElement[];
   global_rag_documents: RagDocumentPreview[];
+}
+
+export interface AcademicCycleOverviewResponse {
+  parcours: Parcours;
+  formations: Formation[];
+  effective_elements: EffectiveFormationElement[];
+  tarifs: Tarif[];
 }

@@ -83,6 +83,25 @@ def test_explicit_correction_can_replace_a_higher_ranked_profile() -> None:
     assert state.active_state.profile is AcademicProfile.LICENCE_STUDENT
 
 
+@pytest.mark.parametrize(
+    "message",
+    [
+        "j ai deja fait la preinscription",
+        "c'est bon amlt preinscrit",
+        "3amlt preinscrit chnouma lawra9",
+        "la pré-inscription est faite",
+    ],
+)
+def test_completed_pre_registration_is_remembered(message: str) -> None:
+    state = ConversationState.new(uuid4())
+    facts, negation = _extract(message, state)
+
+    ProfileResolver().apply(state, facts, negation)
+
+    assert facts.pre_registration_completed is True
+    assert state.active_state.pre_registration_completed is True
+
+
 def test_hypothetical_profile_is_isolated_from_the_real_user() -> None:
     state = ConversationState.new(uuid4())
     real_user = state.subjects[ConversationSubject.SELF]
@@ -159,6 +178,21 @@ def test_short_science_answer_resolves_the_pending_bac_specialty() -> None:
     assert result.previous_intents == ("ORIENTATION",)
     assert subject.bac_specialty == "SCIENCES"
     assert subject.pending_slot is None
+
+
+def test_bac_letters_is_recognized_without_inventing_a_licence_profile() -> None:
+    state = ConversationState.new(uuid4())
+    facts, negation = _extract(
+        "je suis bac lettres, est-ce que je peux faire une licence industrielle ?",
+        state,
+    )
+
+    ProfileResolver().apply(state, facts, negation)
+
+    assert facts.profile is AcademicProfile.NEW_BAC
+    assert state.active_state.profile is AcademicProfile.NEW_BAC
+    assert state.active_state.bac_specialty == "LETTERS"
+    assert state.active_state.licence_specialty is None
 
 
 def test_prompt_facts_use_student_facing_labels_only() -> None:

@@ -21,6 +21,7 @@ class RawFacts:
     interests: tuple[str, ...] = ()
     target: str | None = None
     finishing_current_degree: bool = False
+    pre_registration_completed: bool = False
     correction: bool = False
     scope: ContextScope = ContextScope.CURRENT
 
@@ -78,6 +79,10 @@ class RawFactExtractor:
             interests=tuple(interests),
             target=target,
             finishing_current_degree=self._matches("finishing", text),
+            pre_registration_completed=self._matches(
+                "pre_registration_completed",
+                text,
+            ),
             correction=self._matches("correction", text),
             scope=self.context.detect(text),
         )
@@ -102,13 +107,7 @@ class RawFactExtractor:
             candidates.append(AcademicProfile.MASTER_HOLDER)
         if self._matches("licence_holder", text):
             candidates.append(AcademicProfile.LICENCE_HOLDER)
-        elif self._matches("licence_student", text) or (
-            self._matches("licence", text)
-            and any(
-                contains_phrase(text, cue)
-                for cue in ("ena", "je suis", "andi", "3andi", "na9ra")
-            )
-        ):
+        elif self._matches("licence_student", text):
             candidates.append(AcademicProfile.LICENCE_STUDENT)
         if self._matches("prepa_holder", text):
             candidates.append(AcademicProfile.PREPA_HOLDER)
@@ -127,6 +126,7 @@ class RawFactExtractor:
             ("INFORMATIQUE", "bac_info"),
             ("TECHNIQUE", "bac_technique"),
             ("ECONOMIE_GESTION", "bac_eco"),
+            ("LETTERS", "bac_letters"),
             ("SPORT", "bac_sport"),
         ):
             if any(contains_phrase(text, term) for term in self.terms.get(key, [])):

@@ -21,7 +21,7 @@ describe("CrudForm", () => {
     expect(screen.getByLabelText(/Code/)).toHaveAttribute("pattern", "[A-Z0-9][A-Z0-9_\\-]*");
   });
 
-  it("serializes a new parcours with typed values", async () => {
+  it("serializes a new academic cycle with typed values", async () => {
     const user = userEvent.setup();
     const onSubmit = vi.fn().mockResolvedValue(undefined);
     render(
@@ -39,7 +39,7 @@ describe("CrudForm", () => {
     await user.type(screen.getByLabelText(/Code/), "MASTER");
     await user.type(screen.getByLabelText(/^Nom/), "Cycle Master");
     await user.type(screen.getByLabelText(/Durée en années/), "2");
-    await user.click(screen.getByRole("button", { name: "Créer le parcours" }));
+    await user.click(screen.getByRole("button", { name: "Créer le cycle académique" }));
 
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ code: "MASTER", nom: "Cycle Master", duree_annees: 2, actif: true }),
@@ -61,13 +61,13 @@ describe("CrudForm", () => {
       />,
     );
 
-    await user.selectOptions(screen.getByLabelText(/^Parcours/), "2");
+    await user.selectOptions(screen.getByLabelText(/^Cycle académique/), "2");
     await user.type(screen.getByLabelText(/^Code/), "LICENCE_TEST");
     await user.type(screen.getByLabelText(/^Nom \*/), "Licence test");
     const languages = screen.getByLabelText(/Langues d’enseignement/);
     await user.clear(languages);
     await user.type(languages, "francais, anglais, francais");
-    await user.click(screen.getByRole("button", { name: "Créer le formation" }));
+    await user.click(screen.getByRole("button", { name: "Créer la formation" }));
 
     expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({
       langues_enseignement: ["FRANCAIS", "ANGLAIS"],

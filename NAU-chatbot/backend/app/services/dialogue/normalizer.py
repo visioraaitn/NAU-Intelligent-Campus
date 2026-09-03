@@ -8,7 +8,7 @@ def fold_text(value: str) -> str:
     normalized = unicodedata.normalize("NFKD", value or "")
     without_marks = "".join(char for char in normalized if not unicodedata.combining(char))
     lowered = without_marks.lower().replace("’", "'")
-    lowered = re.sub(r"[^a-z0-9'\s]+", " ", lowered)
+    lowered = re.sub(r"[^a-z0-9\u0600-\u06ff'\s]+", " ", lowered)
     return re.sub(r"\s+", " ", lowered).strip()
 
 

@@ -24,6 +24,12 @@ describe("AuthProvider", () => {
       token_type: "bearer",
       expires_in: 300,
       csrf_token: "csrf-after",
+      user: {
+        id: "f69c1b33-10e7-4e91-bd42-5a8c98da0d91",
+        name: "Ahmed",
+        email: "ahmed@example.com",
+        role: "USER",
+      },
     });
 
     render(<AuthProvider><StatusProbe /></AuthProvider>);

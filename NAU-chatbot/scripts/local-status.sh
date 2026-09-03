@@ -20,4 +20,5 @@ fi
 check_json backend http://127.0.0.1:8000/health
 check_json readiness http://127.0.0.1:8000/health/ready
 check_json inference http://127.0.0.1:8010/health
+check_json speech http://127.0.0.1:8011/health
 check_json chroma http://127.0.0.1:8001/api/v2/heartbeat

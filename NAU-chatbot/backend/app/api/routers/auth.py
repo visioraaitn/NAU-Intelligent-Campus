@@ -6,6 +6,7 @@ from app.core.config import Settings
 from app.core.dependencies import (
     auth_service,
     client_bucket,
+    identity_service,
     rate_limiter,
     settings_dependency,
 )
@@ -16,7 +17,14 @@ from app.core.security import (
     TokenPair,
     verify_csrf,
 )
-from app.models.schemas.auth import LoginRequest, LogoutResponse, TokenResponse
+from app.models.schemas.auth import (
+    AuthUserResponse,
+    LoginRequest,
+    LogoutResponse,
+    SignupRequest,
+    TokenResponse,
+)
+from app.services.identity_service import IdentityService
 from app.services.memory.rate_limiter import RedisRateLimiter
 
 
@@ -49,7 +57,33 @@ def _response(pair: TokenPair) -> TokenResponse:
         access_token=pair.access_token,
         expires_in=pair.access_expires_in,
         csrf_token=pair.csrf_token,
+        user=AuthUserResponse(
+            id=pair.principal.user_id,
+            name=pair.principal.name,
+            email=pair.principal.email,
+            role=pair.principal.role,
+        ),
     )
+
+
+@router.post("/signup", response_model=TokenResponse, status_code=201)
+async def signup(
+    payload: SignupRequest,
+    response: Response,
+    request: Request,
+    identity: IdentityService = Depends(identity_service),
+    limiter: RedisRateLimiter = Depends(rate_limiter),
+    settings: Settings = Depends(settings_dependency),
+) -> TokenResponse:
+    await limiter.enforce(client_bucket(request, "auth-signup", settings), 5, 60)
+    pair = await identity.signup(
+        payload.name,
+        payload.email,
+        payload.password,
+        payload.password_confirmation,
+    )
+    _set_cookies(response, pair, settings)
+    return _response(pair)
 
 
 @router.post("/login", response_model=TokenResponse)

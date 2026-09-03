@@ -38,38 +38,34 @@ export function AdminLayout() {
           </button>
         </div>
         <nav className="admin-nav">
-          <span className="admin-nav__label">Vue d’ensemble</span>
+          <span className="admin-nav__label">Gestion métier</span>
           <NavLink end to="/admin" className={({ isActive }) => isActive ? "active" : undefined}>
             <Icon name="dashboard" /> Tableau de bord
           </NavLink>
-          <NavLink to="/admin/academic-overview" className={({ isActive }) => isActive ? "active" : undefined}>
-            <Icon name="database" /> Fiches académiques
+          <NavLink to="/admin/catalogue" className={({ isActive }) => isActive ? "active" : undefined}>
+            <Icon name="database" /> Catalogue académique
+          </NavLink>
+          <NavLink to="/admin/admission" className={({ isActive }) => isActive ? "active" : undefined}>
+            <Icon name="edit" /> Admission & inscription
+          </NavLink>
+          <NavLink to="/admin/tarifs" className={({ isActive }) => isActive ? "active" : undefined}>
+            <Icon name="database" /> Tarifs
           </NavLink>
           <NavLink to="/admin/orientation-matrix" className={({ isActive }) => isActive ? "active" : undefined}>
             <Icon name="sparkles" /> Diagnostic orientation
           </NavLink>
-          <span className="admin-nav__label">Données académiques</span>
-          {entityConfigList.filter((config) => config.resource !== "orientation-rules").map((config) => (
-            <NavLink
-              key={config.resource}
-              to={`/admin/${config.resource}`}
-              className={({ isActive }) => isActive ? "active" : undefined}
-            >
-              <Icon name="database" /> {config.title}
-            </NavLink>
-          ))}
-          <span className="admin-nav__label">Règles</span>
-          <NavLink to="/admin/orientation-rules" className={({ isActive }) => isActive ? "active" : undefined}>
-            <Icon name="edit" /> Règles d’orientation
-          </NavLink>
-          <span className="admin-nav__label">Assistant</span>
-          <NavLink to="/admin/rag" className={({ isActive }) => isActive ? "active" : undefined}>
-            <Icon name="sparkles" /> Indexation RAG
-          </NavLink>
+          <details className="admin-nav__advanced">
+            <summary>Administration avancée <Icon name="chevron-right" /></summary>
+            <div>
+              {entityConfigList.map((config) => <NavLink key={config.resource} to={`/admin/${config.resource}`} className={({ isActive }) => isActive ? "active" : undefined}><Icon name="database" /> {config.resource === "formations" ? "Formations brutes" : config.resource === "specialisations" ? "Spécialisations brutes" : config.resource === "orientation-rules" ? "Règles brutes" : config.title}</NavLink>)}
+              <NavLink to="/admin/academic-overview" className={({ isActive }) => isActive ? "active" : undefined}><Icon name="database" /> Fiches formations</NavLink>
+              <NavLink to="/admin/rag" className={({ isActive }) => isActive ? "active" : undefined}><Icon name="sparkles" /> Indexation RAG</NavLink>
+            </div>
+          </details>
         </nav>
         <div className="admin-sidebar__footer">
-          <Link className="sidebar-public-link" to="/" target="_blank" rel="noreferrer">
-            <Icon name="external" /> Voir l’assistant public
+          <Link className="sidebar-public-link" to="/chat" target="_blank" rel="noreferrer">
+            <Icon name="external" /> Ouvrir le chatbot
           </Link>
           <button type="button" onClick={() => void handleLogout()} disabled={loggingOut}>
             <Icon name="logout" /> {loggingOut ? "Déconnexion…" : "Se déconnecter"}

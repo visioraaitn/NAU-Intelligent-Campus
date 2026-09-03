@@ -21,6 +21,7 @@ VALUE_LABELS = {
     "INFORMATIQUE": "Informatique",
     "TECHNIQUE": "Sciences techniques",
     "ECONOMIE_GESTION": "Économie et Gestion",
+    "LETTERS": "Lettres",
     "SPORT": "Sport",
     "HIGH": "à l'aise",
     "MEDIUM": "niveau intermédiaire",
@@ -63,12 +64,15 @@ INTENT_LABELS = {
     "INTERNATIONAL": "international",
     "ACCREDITATION": "reconnaissance du diplôme",
     "ADMISSION": "admission",
+    "PAYMENT": "paiement",
     "PREINSCRIPTION": "pré-inscription",
+    "REGISTRATION_DOCUMENTS": "documents d'inscription",
     "CONTACT": "contact",
     "ORIENTATION": "orientation",
     "DETAILS": "détails",
     "DIFFICULTY": "niveau de difficulté",
     "PERSUASION": "atouts de l'IIT",
+    "PROFILE_RECALL": "rappel du profil académique",
     "GENERAL": "échange général",
 }
 

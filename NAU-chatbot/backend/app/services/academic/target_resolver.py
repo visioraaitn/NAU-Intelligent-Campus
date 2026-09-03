@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 
 from app.models.sqlalchemy import Formation, Specialisation
@@ -14,14 +15,24 @@ class AcademicTarget:
     specialisation: Specialisation | None = None
 
 
+@dataclass(frozen=True, slots=True)
+class AcademicTargetResolution:
+    target: AcademicTarget | None = None
+    unavailable_label: str | None = None
+
+
 class AcademicTargetResolver:
     def __init__(self, catalogue: AcademicCatalogService) -> None:
         self.catalogue = catalogue
 
     async def resolve(self, message: str) -> AcademicTarget | None:
+        return (await self.resolve_request(message)).target
+
+    async def resolve_request(self, message: str) -> AcademicTargetResolution:
         text = fold_text(message)
         specs = (await self.catalogue.specialisations.list(PageRequest(page_size=100))).items
         spec_aliases = {
+            "cyber": "LIC_INFO_CYBER",
             "licence cyber": "LIC_INFO_CYBER",
             "licrnce cyber": "LIC_INFO_CYBER",
             "cybersecurite": "LIC_INFO_CYBER",
@@ -37,9 +48,11 @@ class AcademicTargetResolver:
         if alias_code:
             spec = next((item for item in specs if item.code == alias_code), None)
             if spec:
-                return AcademicTarget(
-                    await self.catalogue.get_formation(spec.formation_id),
-                    spec,
+                return AcademicTargetResolution(
+                    AcademicTarget(
+                        await self.catalogue.get_formation(spec.formation_id),
+                        spec,
+                    )
                 )
         for spec in specs:
             code = fold_text(spec.code)
@@ -48,7 +61,7 @@ class AcademicTargetResolver:
                 len(name.split()) > 1 and contains_phrase(text, name)
             ):
                 formation = await self.catalogue.get_formation(spec.formation_id)
-                return AcademicTarget(formation, spec)
+                return AcademicTargetResolution(AcademicTarget(formation, spec))
         formations = (await self.catalogue.formations.list(PageRequest(page_size=100))).items
         aliases = {
             "prepa": "PREPA_GENERAL",
@@ -74,9 +87,47 @@ class AcademicTargetResolver:
         if code:
             match = next((item for item in formations if item.code == code), None)
             if match:
-                return AcademicTarget(match)
+                return AcademicTargetResolution(AcademicTarget(match))
         for formation in formations:
             name = fold_text(formation.nom)
             if len(name.split()) > 1 and contains_phrase(text, name):
-                return AcademicTarget(formation)
+                return AcademicTargetResolution(AcademicTarget(formation))
+        return AcademicTargetResolution(
+            unavailable_label=self._requested_unavailable_offer(text)
+        )
+
+    @staticmethod
+    def _requested_unavailable_offer(text: str) -> str | None:
+        patterns = (
+            re.compile(r"\b(?P<kind>licence|mastere?)\b(?:\s+(?:en|de|d))?\s+(?P<label>[a-z0-9][a-z0-9' ]*)"),
+            re.compile(r"\b(?P<kind>cycle ingenieur|genie|ingenierie)\b(?:\s+(?:en|de|d))?\s+(?P<label>[a-z0-9][a-z0-9' ]*)"),
+        )
+        ownership_cues = (
+            "j ai",
+            "je suis en",
+            "titulaire",
+            "diplome en",
+            "ena licence",
+            "andi licence",
+            "3andi licence",
+            "na9ra licence",
+        )
+        stop_words = {
+            "a", "au", "avec", "car", "chez", "dans", "de", "des", "du", "elle",
+            "en", "est", "et", "iit", "la", "le", "les", "ou", "par", "pour",
+            "propose", "proposee", "proposees", "possible", "que", "qui", "sur", "une",
+        }
+
+        for pattern in patterns:
+            for match in pattern.finditer(text):
+                prefix = text[: match.start()].strip()
+                if any(contains_phrase(prefix, cue) for cue in ownership_cues):
+                    continue
+                words: list[str] = []
+                for word in match.group("label").split():
+                    if word in stop_words or len(words) == 5:
+                        break
+                    words.append(word)
+                if words:
+                    return f"{match.group('kind')} {' '.join(words)}"
         return None

@@ -20,6 +20,7 @@ from app.domain.recommendation.schemas import (
 from app.services.dialogue.conversion_cta import ConversionCTA
 from app.services.dialogue.dialogue_act_detector import DialogueAct
 from app.services.dialogue.guards.anti_repetition import AntiRepetitionGuard
+from app.services.dialogue.structured_response import StructuredResponseBuilder
 from app.services.recommendation.recommendation_service import RecommendationService
 
 
@@ -179,7 +180,7 @@ def _new_bac_catalogue(repository_factory):
 
 @pytest.mark.asyncio
 @pytest.mark.parametrize("bac", ["MATH", "SCIENCES"])
-async def test_new_scientific_bac_prioritizes_prepa_and_keeps_licence_options(
+async def test_new_scientific_bac_prioritizes_licences_and_keeps_prepa_last(
     bac: str,
     repository_factory,
 ) -> None:
@@ -193,13 +194,76 @@ async def test_new_scientific_bac_prioritizes_prepa_and_keeps_licence_options(
     )
 
     assert decision.primary is not None
-    assert decision.primary.formation_code == "PREPA_GENERAL"
+    assert decision.primary.formation_code == "LICENCE_INFO"
     assert decision.secondary is not None
-    assert decision.secondary.formation_code == "LICENCE_INFO"
-    assert {option.formation_code for option in decision.alternatives} == {
-        "LICENCE_INFO",
+    assert decision.secondary.formation_code == "LICENCE_MECATRONIQUE_SI"
+    assert tuple(option.formation_code for option in decision.alternatives) == (
         "LICENCE_MECATRONIQUE_SI",
-    }
+        "PREPA_GENERAL",
+    )
+
+
+@pytest.mark.asyncio
+async def test_new_scientific_bac_can_explicitly_choose_prepa(
+    repository_factory,
+) -> None:
+    service = RecommendationService(
+        _new_bac_catalogue(repository_factory),
+        AlwaysEligible(),
+    )
+
+    decision = await service.recommend(
+        SubjectState(
+            profile=AcademicProfile.NEW_BAC,
+            bac_specialty="MATH",
+            target="PREPA",
+        )
+    )
+
+    assert decision.primary is not None
+    assert decision.primary.formation_code == "PREPA_GENERAL"
+
+
+@pytest.mark.asyncio
+async def test_scientific_bac_response_lists_licences_before_prepa(
+    repository_factory,
+) -> None:
+    catalogue = _new_bac_catalogue(repository_factory)
+    service = RecommendationService(catalogue, AlwaysEligible())
+    subject = SubjectState(
+        profile=AcademicProfile.NEW_BAC,
+        bac_specialty="MATH",
+    )
+    decision = await service.recommend(subject)
+
+    answer = await StructuredResponseBuilder(catalogue).orientation(subject, decision)
+
+    assert answer is not None
+    assert "je te recommande d'abord les licences IIT admissibles" in answer
+    assert answer.index("Licence en Informatique") < answer.index(
+        "Mécatronique & Systèmes Intelligents"
+    )
+    assert answer.index("Mécatronique & Systèmes Intelligents") < answer.index(
+        "Cycle Préparatoire"
+    )
+    assert "conseil prioritaire" not in answer
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "profile",
+    [AcademicProfile.PREPA_HOLDER, AcademicProfile.LICENCE_HOLDER],
+)
+async def test_completed_prepa_or_licence_still_targets_engineering(
+    profile: AcademicProfile,
+    repository_factory,
+) -> None:
+    service = RecommendationService(_catalogue(repository_factory), AlwaysEligible())
+
+    decision = await service.recommend(SubjectState(profile=profile))
+
+    assert decision.primary is not None
+    assert decision.primary.formation_code == "INGENIEUR_INFO"
 
 
 @pytest.mark.asyncio
@@ -223,6 +287,35 @@ async def test_new_economics_bac_is_routed_only_to_licence(
     assert decision.secondary is None
     assert decision.alternatives == ()
     assert "Ingénieur" not in decision.primary.formation_name
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("bac", "expected_primary"),
+    [
+        ("MATH", "LICENCE_INFO"),
+        ("SCIENCES", "LICENCE_INFO"),
+        ("INFORMATIQUE", "LICENCE_INFO"),
+        ("ECONOMIE_GESTION", "LICENCE_INFO"),
+        ("TECHNIQUE", "LICENCE_MECATRONIQUE_SI"),
+    ],
+)
+async def test_new_bac_business_priority_is_stable(
+    bac: str,
+    expected_primary: str,
+    repository_factory,
+) -> None:
+    service = RecommendationService(
+        _new_bac_catalogue(repository_factory),
+        AlwaysEligible(),
+    )
+
+    decision = await service.recommend(
+        SubjectState(profile=AcademicProfile.NEW_BAC, bac_specialty=bac)
+    )
+
+    assert decision.primary is not None
+    assert decision.primary.formation_code == expected_primary
 
 
 @pytest.mark.asyncio

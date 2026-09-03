@@ -13,6 +13,7 @@ x-data-environment: &data-environment
   CHROMA_PORT: "8000"
   CHROMA_COLLECTION: ${CHROMA_COLLECTION:-iit_academic_v1}
   INFERENCE_BASE_URL: http://inference:8010
+  SPEECH_INFERENCE_BASE_URL: http://speech-inference:8011
   INFERENCE_SERVICE_TOKEN: ${INFERENCE_SERVICE_TOKEN:?Set INFERENCE_SERVICE_TOKEN in .env}
   INFERENCE_TIMEOUT_SECONDS: ${INFERENCE_TIMEOUT_SECONDS:-120}
   RAG_QUEUE_KEY: ${RAG_QUEUE_KEY:-iit:rag:jobs}
@@ -73,6 +74,8 @@ services:
       CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
       TRUSTED_HOSTS: ${TRUSTED_HOSTS:-localhost,127.0.0.1,backend}
       MAX_REQUEST_BYTES: ${MAX_REQUEST_BYTES:-32768}
+      SPEECH_MAX_UPLOAD_BYTES: ${SPEECH_MAX_UPLOAD_BYTES:-15728640}
+      SPEECH_RATE_LIMIT_PER_MINUTE: ${SPEECH_RATE_LIMIT_PER_MINUTE:-10}
       CHAT_RATE_LIMIT_PER_MINUTE: ${CHAT_RATE_LIMIT_PER_MINUTE:-20}
       ADMIN_RATE_LIMIT_PER_MINUTE: ${ADMIN_RATE_LIMIT_PER_MINUTE:-60}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-86400}
@@ -88,6 +91,8 @@ services:
       chroma:
         condition: service_healthy
       inference:
+        condition: service_started
+      speech-inference:
         condition: service_started
     ports:
       - "${BACKEND_BIND_ADDRESS:-127.0.0.1}:${BACKEND_PORT:-8000}:8000"
@@ -246,6 +251,45 @@ services:
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,size=8g
+    security_opt:
+      - no-new-privileges:true
+    stop_grace_period: 120s
+
+  speech-inference:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.speech
+      target: runtime
+    image: iit-academic-speech:local
+    restart: unless-stopped
+    command: ["./scripts/start-speech.sh"]
+    environment:
+      APP_ENV: ${APP_ENV:-production}
+      INFERENCE_SERVICE_TOKEN: ${INFERENCE_SERVICE_TOKEN:?Set INFERENCE_SERVICE_TOKEN in .env}
+      MODELS_LOCAL_ONLY: ${MODELS_LOCAL_ONLY:-true}
+      SPEECH_MAX_UPLOAD_BYTES: ${SPEECH_MAX_UPLOAD_BYTES:-15728640}
+      HF_HOME: /models/huggingface
+      XDG_CACHE_HOME: /models/huggingface/.cache
+      HF_HUB_OFFLINE: ${HF_HUB_OFFLINE:-1}
+      TRANSFORMERS_OFFLINE: ${TRANSFORMERS_OFFLINE:-1}
+      TOKENIZERS_PARALLELISM: "false"
+      NVIDIA_VISIBLE_DEVICES: ${NVIDIA_VISIBLE_DEVICES:-all}
+      PYTORCH_CUDA_ALLOC_CONF: expandable_segments:True
+    volumes:
+      - model_data:/models/huggingface
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    shm_size: 2gb
+    networks:
+      - internal
+    read_only: true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,size=2g
     security_opt:
       - no-new-privileges:true
     stop_grace_period: 120s

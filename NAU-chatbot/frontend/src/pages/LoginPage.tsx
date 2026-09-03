@@ -1,8 +1,7 @@
 import { type FormEvent, useEffect, useRef, useState } from "react";
 import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
-import { Brand } from "../components/Brand";
-import { Icon } from "../components/Icon";
 import { useAuth } from "../features/auth/AuthContext";
+import { AuthLayout } from "../layouts/AuthLayout";
 import { errorMessage } from "../utils/errors";
 
 interface LocationState {
@@ -10,7 +9,7 @@ interface LocationState {
 }
 
 export function LoginPage() {
-  const { status, isAuthenticated, login } = useAuth();
+  const { status, isAuthenticated, user, login } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const usernameRef = useRef<HTMLInputElement>(null);
@@ -21,7 +20,7 @@ export function LoginPage() {
 
   useEffect(() => usernameRef.current?.focus(), []);
 
-  if (isAuthenticated) return <Navigate to="/admin" replace />;
+  if (isAuthenticated) return <Navigate to={user?.role === "ADMIN" ? "/admin" : "/chat"} replace />;
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -29,9 +28,13 @@ export function LoginPage() {
     setBusy(true);
     setError(null);
     try {
-      await login(username.trim(), password);
+      const authenticatedUser = await login(username.trim(), password);
       const requested = (location.state as LocationState | null)?.from;
-      navigate(requested?.startsWith("/admin/") ? requested : "/admin", { replace: true });
+      const home = authenticatedUser.role === "ADMIN" ? "/admin" : "/chat";
+      const allowedRequest = authenticatedUser.role === "ADMIN"
+        ? requested?.startsWith("/admin")
+        : requested?.startsWith("/chat");
+      navigate(allowedRequest && requested ? requested : home, { replace: true });
     } catch (reason) {
       setError(errorMessage(reason));
     } finally {
@@ -40,25 +43,24 @@ export function LoginPage() {
   };
 
   return (
-    <main className="login-page">
-      <section className="login-panel" aria-labelledby="login-title">
-        <Brand link="/" />
-        <div className="login-panel__heading">
-          <span className="eyebrow">Espace sécurisé</span>
-          <h1 id="login-title">Administration académique</h1>
-          <p>Connectez-vous pour gérer le catalogue publié et son indexation.</p>
-        </div>
-
+    <AuthLayout
+      titleId="login-title"
+      eyebrow="IIT Assistant"
+      title="Bienvenue"
+      subtitle="Accédez à votre assistant académique IIT."
+      footer={<p className="auth-switch">Pas encore de compte ? <Link to="/signup">Créer un compte</Link></p>}
+    >
         {error && <div className="alert alert--error" role="alert">{error}</div>}
 
         <form className="auth-form" onSubmit={handleSubmit}>
           <label className="field">
-            <span>Identifiant</span>
+            <span>Email ou identifiant</span>
             <input
               ref={usernameRef}
               autoComplete="username"
-              maxLength={100}
+              maxLength={320}
               name="username"
+              placeholder=" "
               required
               value={username}
               onChange={(event) => setUsername(event.target.value)}
@@ -70,6 +72,7 @@ export function LoginPage() {
               autoComplete="current-password"
               maxLength={256}
               name="password"
+              placeholder=" "
               required
               type="password"
               value={password}
@@ -81,17 +84,6 @@ export function LoginPage() {
             {busy ? "Connexion…" : "Se connecter"}
           </button>
         </form>
-        <Link className="back-link" to="/">
-          <Icon name="chevron-left" /> Retour à l’assistant
-        </Link>
-      </section>
-      <aside className="login-aside" aria-hidden="true">
-        <div className="login-aside__orb" />
-        <div className="login-aside__copy">
-          <span className="eyebrow">IIT Knowledge</span>
-          <h2>Une source fiable, une information toujours à jour.</h2>
-        </div>
-      </aside>
-    </main>
+    </AuthLayout>
   );
 }

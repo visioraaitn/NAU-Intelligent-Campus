@@ -1,7 +1,7 @@
 import type { AcademicResource } from "../../types/academic";
 
 export type FieldKind = "text" | "textarea" | "number" | "date" | "select" | "checkbox" | "json" | "reference" | "string-list" | "language";
-export type ColumnFormat = "text" | "enum" | "currency" | "date" | "json" | "criteria" | "reference" | "list" | "language";
+export type ColumnFormat = "text" | "enum" | "currency" | "date" | "json" | "criteria" | "reference" | "list" | "language" | "years";
 
 export interface SelectOption {
   value: string;
@@ -34,16 +34,53 @@ export interface EntityColumn {
   reference?: AcademicResource;
 }
 
+export interface EntityRowNavigation {
+  resource: AcademicResource | "academic-overview" | "cycle-workspace";
+  filterParam: string;
+  valueKey?: string;
+  contextParams?: Array<{
+    param: string;
+    valueKey: string;
+  }>;
+}
+
+export interface EntityHierarchyContext {
+  filterParam: string;
+  reference: AcademicResource;
+  parentReference: AcademicResource;
+  parentIdKey: string;
+  parentResource: AcademicResource;
+  parentFilterParam: string;
+  rootResource: AcademicResource;
+  rootLabel: string;
+}
+
 export interface EntityConfig {
   resource: AcademicResource;
   singular: string;
   plural: string;
   title: string;
   description: string;
+  createTitle?: string;
+  editTitle?: string;
+  createActionLabel?: string;
   fields: EntityField[];
   columns: EntityColumn[];
+  compactTable?: boolean;
+  contextualCreate?: {
+    field: string;
+    queryParam: string;
+  };
+  filteredEmptyState?: {
+    message: string;
+    actionLabel: string;
+  };
+  hierarchyContext?: EntityHierarchyContext;
+  parcoursFilter?: boolean;
   formationFilter?: boolean;
+  formationFilterInUrl?: boolean;
   specialisationFilter?: boolean;
+  rowNavigation?: EntityRowNavigation;
 }
 
 const codePattern = "[A-Z0-9][A-Z0-9_\\-]*";
@@ -67,6 +104,14 @@ const formationField = (required = true): EntityField => ({
   required,
 });
 
+const parcoursField = (): EntityField => ({
+  name: "parcours_id",
+  label: "Cycle académique",
+  kind: "reference",
+  reference: "parcours",
+  help: "Laisser vide pour une information globale ou choisir une formation ci-dessous.",
+});
+
 const specialisationField = (): EntityField => ({
   name: "specialisation_id",
   label: "Spécialisation",
@@ -87,15 +132,18 @@ const sourceField: EntityField = {
 export const entityConfigs: Record<AcademicResource, EntityConfig> = {
   parcours: {
     resource: "parcours",
-    singular: "parcours",
-    plural: "parcours",
-    title: "Parcours",
-    description: "Niveaux et familles de cursus qui structurent le catalogue académique.",
+    singular: "cycle académique",
+    plural: "cycles académiques",
+    title: "Cycles académiques",
+    description: "Un cycle académique représente le type ou niveau du cursus. Les disciplines sont créées comme formations.",
+    compactTable: true,
+    rowNavigation: {
+      resource: "cycle-workspace",
+      filterParam: "parcours_id",
+    },
     columns: [
-      { key: "parcours_id", label: "Parcours", format: "reference", reference: "parcours" },
-      { key: "code", label: "Code" },
-      { key: "nom", label: "Nom" },
-      { key: "duree_annees", label: "Durée (ans)" },
+      { key: "nom", label: "Cycle académique" },
+      { key: "duree_annees", label: "Durée", format: "years" },
     ],
     fields: [
       { name: "code", label: "Code", kind: "text", required: true, maxLength: 50, pattern: codePattern, placeholder: "LICENCE" },
@@ -110,17 +158,22 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
     singular: "formation",
     plural: "formations",
     title: "Formations",
-    description: "Diplômes et programmes proposés au sein de chaque parcours.",
+    createActionLabel: "Créer la formation",
+    description: "Diplômes et programmes proposés au sein de chaque cycle académique.",
+    compactTable: true,
+    parcoursFilter: true,
+    rowNavigation: {
+      resource: "academic-overview",
+      filterParam: "formation_id",
+    },
     columns: [
-      { key: "formation_id", label: "Formation", format: "reference", reference: "formations" },
-      { key: "code", label: "Code" },
       { key: "nom", label: "Formation" },
       { key: "intitule_diplome", label: "Diplôme" },
-      { key: "nb_semestres", label: "Semestres" },
+      { key: "duree_annees", label: "Durée", format: "years" },
       { key: "langues_enseignement", label: "Langues", format: "list" },
     ],
     fields: [
-      { name: "parcours_id", label: "Parcours", kind: "reference", reference: "parcours", required: true },
+      { name: "parcours_id", label: "Cycle académique", kind: "reference", reference: "parcours", required: true },
       { name: "code", label: "Code", kind: "text", required: true, maxLength: 100, pattern: codePattern },
       { name: "nom", label: "Nom", kind: "text", required: true, maxLength: 255 },
       { name: "intitule_diplome", label: "Intitulé du diplôme", kind: "text", maxLength: 255 },
@@ -149,11 +202,32 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
     plural: "spécialisations",
     title: "Spécialisations",
     description: "Options, filières et spécialisations rattachées à une formation.",
+    createTitle: "Nouvelle spécialisation",
+    editTitle: "Modifier la spécialisation",
+    createActionLabel: "Créer la spécialisation",
+    compactTable: true,
+    contextualCreate: {
+      field: "formation_id",
+      queryParam: "formation_id",
+    },
+    filteredEmptyState: {
+      message: "Aucune spécialisation n’est encore définie pour cette formation.",
+      actionLabel: "Ajouter une spécialisation",
+    },
     formationFilter: true,
+    formationFilterInUrl: true,
+    hierarchyContext: {
+      filterParam: "formation_id",
+      reference: "formations",
+      parentReference: "parcours",
+      parentIdKey: "parcours_id",
+      parentResource: "formations",
+      parentFilterParam: "parcours_id",
+      rootResource: "parcours",
+      rootLabel: "Cycle académique",
+    },
     columns: [
-      { key: "code", label: "Code" },
-      { key: "nom", label: "Spécialisation" },
-      { key: "ordre_affichage", label: "Ordre" },
+      { key: "code", label: "Spécialisation" },
     ],
     fields: [
       formationField(),
@@ -174,6 +248,7 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
     formationFilter: true,
     specialisationFilter: true,
     columns: [
+      { key: "parcours_id", label: "Cycle académique", format: "reference", reference: "parcours" },
       { key: "formation_id", label: "Formation", format: "reference", reference: "formations" },
       { key: "specialisation_id", label: "Spécialisation", format: "reference", reference: "specialisations" },
       { key: "type_element", label: "Type", format: "enum" },
@@ -181,6 +256,7 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
       { key: "organisme", label: "Organisme" },
     ],
     fields: [
+      parcoursField(),
       formationField(false),
       specialisationField(),
       { name: "parent_id", label: "Élément parent", kind: "reference", reference: "elements" },
@@ -194,6 +270,7 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
           ["COMPETENCE", "Compétence"], ["METIER", "Métier"], ["DOMAINE_ACTIVITE", "Domaine d’activité"],
           ["CERTIFICATION", "Certification"], ["LANGUE", "Langue"], ["MOBILITE", "Mobilité"],
           ["OUTIL", "Outil"], ["OPPORTUNITE", "Opportunité"], ["INFORMATION", "Information"],
+          ["DOCUMENT_INSCRIPTION", "Document d’inscription"], ["LIEN_PREINSCRIPTION", "Lien de préinscription"],
         ] as const).map(([value, label]) => ({ value, label })),
       },
       { name: "code", label: "Code", kind: "text", maxLength: 120, pattern: extendedCodePattern },
@@ -201,6 +278,7 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
       { name: "organisme", label: "Organisme", kind: "text", maxLength: 255 },
       { name: "ordre_affichage", label: "Ordre d’affichage", kind: "number", min: 0, step: 1 },
       { name: "description", label: "Description", kind: "textarea", maxLength: ragTextMaxLength, fullWidth: true, help: "Gardez un fait atomique et concis; créez plusieurs éléments pour des informations distinctes." },
+      { name: "valeur", label: "Valeur ou lien", kind: "textarea", maxLength: 2_048, fullWidth: true },
       sourceField,
       activeField,
     ],
@@ -210,10 +288,11 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
     singular: "tarif",
     plural: "tarifs",
     title: "Tarifs",
-    description: "Frais d’inscription et échéanciers publiés par formation.",
+    description: "Frais communs du cycle académique et échéanciers propres aux formations.",
     formationFilter: true,
     specialisationFilter: true,
     columns: [
+      { key: "parcours_id", label: "Cycle académique", format: "reference", reference: "parcours" },
       { key: "formation_id", label: "Formation", format: "reference", reference: "formations" },
       { key: "specialisation_id", label: "Spécialisation", format: "reference", reference: "specialisations" },
       { key: "langue_enseignement", label: "Langue", format: "language" },
@@ -224,13 +303,13 @@ export const entityConfigs: Record<AcademicResource, EntityConfig> = {
       { key: "statut", label: "Statut", format: "enum" },
     ],
     fields: [
-      formationField(),
+      parcoursField(),
+      formationField(false),
       specialisationField(),
       {
         name: "langue_enseignement",
         label: "Langue d’enseignement",
         kind: "language",
-        required: true,
         defaultValue: "FRANCAIS",
         help: "Les choix proviennent des langues configurées sur la formation sélectionnée.",
       },

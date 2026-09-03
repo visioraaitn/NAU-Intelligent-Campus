@@ -13,12 +13,23 @@ interface CrudFormProps {
   references: ReferenceData;
   referencesLoading: boolean;
   referencesError: string | null;
+  initialValues?: Record<string, unknown>;
+  fixedValues?: Record<string, unknown>;
+  visibleFields?: string[];
+  submitLabel?: string;
   onCancel: () => void;
   onSubmit: (payload: Record<string, unknown>) => Promise<void>;
 }
 
-function initialFieldValue(field: EntityField, entity: AcademicEntity | null): FormValue {
-  const raw = entity?.[field.name] ?? field.defaultValue;
+function initialFieldValue(
+  field: EntityField,
+  entity: AcademicEntity | null,
+  initialValues: Record<string, unknown>,
+  fixedValues: Record<string, unknown>,
+): FormValue {
+  const raw = Object.prototype.hasOwnProperty.call(fixedValues, field.name)
+    ? fixedValues[field.name]
+    : entity?.[field.name] ?? initialValues[field.name] ?? field.defaultValue;
   if (field.kind === "checkbox") return raw === undefined ? false : Boolean(raw);
   if (field.kind === "string-list") {
     return Array.isArray(raw) ? raw.join(", ") : String(raw ?? "");
@@ -74,12 +85,19 @@ export function CrudForm({
   references,
   referencesLoading,
   referencesError,
+  initialValues = {},
+  fixedValues = {},
+  visibleFields,
+  submitLabel,
   onCancel,
   onSubmit,
 }: CrudFormProps) {
   const formId = useId();
   const [values, setValues] = useState<Record<string, FormValue>>(() =>
-    Object.fromEntries(config.fields.map((field) => [field.name, initialFieldValue(field, entity)])),
+    Object.fromEntries(config.fields.map((field) => [
+      field.name,
+      initialFieldValue(field, entity, initialValues, fixedValues),
+    ])),
   );
   const [busy, setBusy] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -97,7 +115,14 @@ export function CrudForm({
   const update = (field: EntityField, value: FormValue) => {
     setValues((current) => {
       const next = { ...current, [field.name]: value };
+      if (field.name === "parcours_id" && current.parcours_id !== value) {
+        next.formation_id = "";
+        next.specialisation_id = "";
+        if (config.resource === "elements") next.parent_id = "";
+        if (config.resource === "tarifs") next.langue_enseignement = "";
+      }
       if (field.name === "formation_id" && current.formation_id !== value) {
+        if (["elements", "tarifs"].includes(config.resource)) next.parcours_id = "";
         next.specialisation_id = "";
         if (config.resource === "elements") next.parent_id = "";
         if (config.resource === "tarifs") {
@@ -124,6 +149,10 @@ export function CrudForm({
 
     if (values.specialisation_id && !values.formation_id) {
       setFormError("Choisissez une formation avant de sélectionner une spécialisation.");
+      return;
+    }
+    if (values.parcours_id && (values.formation_id || values.specialisation_id)) {
+      setFormError("Choisissez soit un cycle académique, soit une formation ou spécialisation.");
       return;
     }
     if (
@@ -169,7 +198,7 @@ export function CrudForm({
       {formError && <div className="alert alert--error" role="alert">{formError}</div>}
 
       <div className="form-grid">
-        {config.fields.map((field) => {
+        {config.fields.filter((field) => !visibleFields || visibleFields.includes(field.name)).map((field) => {
           const fieldId = `${formId}-${field.name}`;
           const helpId = `${fieldId}-help`;
           const common = {
@@ -236,11 +265,11 @@ export function CrudForm({
             control = (
               <select
                 {...common}
-                disabled={!formation}
+                disabled={!formation && !values.parcours_id}
                 value={currentLanguage}
                 onChange={(event) => update(field, event.target.value)}
               >
-                <option value="">Sélectionner une formation d’abord…</option>
+                <option value="">{values.parcours_id ? "Indépendant de la langue" : "Sélectionner une formation d’abord…"}</option>
                 {options.map((language) => (
                   <option value={language} key={language}>{formatLanguage(language)}</option>
                 ))}
@@ -324,7 +353,13 @@ export function CrudForm({
         <button className="button button--ghost" type="button" onClick={onCancel} disabled={busy}>Annuler</button>
         <button className="button button--primary" type="submit" disabled={busy || referencesLoading}>
           {busy && <span className="spinner spinner--small" aria-hidden="true" />}
-          {busy ? "Enregistrement…" : entity ? "Enregistrer" : `Créer le ${config.singular}`}
+          {busy
+            ? "Enregistrement…"
+            : submitLabel
+              ? submitLabel
+            : entity
+              ? "Enregistrer"
+              : config.createActionLabel ?? `Créer le ${config.singular}`}
         </button>
       </div>
     </form>

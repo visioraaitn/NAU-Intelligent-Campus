@@ -13,8 +13,9 @@ ALLOWED_INTENTS = frozenset(
     {
         "CATALOG", "FEES", "DURATION", "PROGRAMME", "CAREERS", "MARKET",
         "CERTIFICATIONS", "INTERNATIONAL", "ACCREDITATION", "ADMISSION",
-        "PREINSCRIPTION", "CONTACT", "ORIENTATION", "DETAILS", "DIFFICULTY",
-        "PERSUASION", "GENERAL",
+        "PAYMENT", "PREINSCRIPTION", "CONTACT", "ORIENTATION", "DETAILS",
+        "DIFFICULTY", "PERSUASION", "PROFILE_RECALL",
+        "REGISTRATION_DOCUMENTS", "GENERAL",
     }
 )
 
@@ -42,16 +43,16 @@ class IntentDetector:
             for intent, patterns in self.patterns.items()
             if any(pattern.search(text) for pattern in patterns)
         ]
-        if not direct and auxiliary_interpretation:
+        if slot_parsed and not direct:
+            direct = list(previous or ("ORIENTATION",))
+        elif not direct and auxiliary_interpretation:
             auxiliary = fold_text(auxiliary_interpretation)
             direct = [
                 intent
                 for intent, patterns in self.patterns.items()
                 if any(pattern.search(auxiliary) for pattern in patterns)
             ]
-        if slot_parsed and not direct:
-            direct = list(previous or ("ORIENTATION",))
-        elif scope is ContextScope.ALL and not direct:
+        if scope is ContextScope.ALL and not direct:
             direct = list(previous or ("GENERAL",))
         elif scope is ContextScope.MORE:
             direct = list(dict.fromkeys(("DETAILS", *(direct or previous or ("GENERAL",)))))
@@ -62,4 +63,6 @@ class IntentDetector:
             direct.insert(0, "ORIENTATION")
         if dialogue_act is DialogueAct.EXPRESS_DIFFICULTY and "DIFFICULTY" not in direct:
             direct.append("DIFFICULTY")
+        if "REGISTRATION_DOCUMENTS" in direct:
+            direct = [intent for intent in direct if intent != "PREINSCRIPTION"]
         return [intent for intent in dict.fromkeys(direct or ["GENERAL"]) if intent in ALLOWED_INTENTS]

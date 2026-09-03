@@ -94,6 +94,11 @@ class ChatOrchestrator:
     async def process(self, message: str, state: ConversationState) -> DialogueResponse:
         first_reply = not any(item.role == "assistant" for item in state.history)
         turn_type = self.turn_gate.classify(message)
+        if (
+            state.active_state.pending_action
+            and self.pending_slots.is_affirmative(message)
+        ):
+            turn_type = TurnType.ACADEMIC
         session_id = str(state.session_id)
         log_stage("TURN_GATE", session_id=session_id, turn_type=turn_type.value)
 
@@ -155,9 +160,15 @@ class ChatOrchestrator:
             dialogue_act=act,
             slot_parsed=pending.parsed,
         )
+        if pending.forced_intents:
+            intents = list(pending.forced_intents)
         if facts.profile and intents == ["GENERAL"]:
             intents = ["ORIENTATION"]
         if facts.target and intents == ["GENERAL"]:
+            intents = ["ORIENTATION"]
+        target_resolution = await self.target_resolver.resolve_request(message)
+        target = target_resolution.target
+        if target_resolution.unavailable_label and intents == ["GENERAL"]:
             intents = ["ORIENTATION"]
         log_stage("INTENTS", session_id=session_id, dialogue_act=act.value, intents=intents)
 
@@ -165,7 +176,6 @@ class ChatOrchestrator:
             answer = "D'accord, je n'insiste pas sur l'informatique. Je peux uniquement te proposer une autre formation présente dans le catalogue académique actif, sans en inventer. Quel domaine t'intéresse ?"
             return self._finish(state, message, answer, intents, act, first_reply)
 
-        target = await self.target_resolver.resolve(message)
         if (
             "ORIENTATION" in intents
             and subject.target == "ENGINEERING"
@@ -240,14 +250,37 @@ class ChatOrchestrator:
             )
             if target is None and recommendation.primary:
                 target = await self._target_from_recommendation(recommendation)
-        elif target is None and subject.recommended_offer:
+        elif (
+            target is None
+            and subject.recommended_offer
+            and not (
+                facts.scope is ContextScope.ALL
+                and "FEES" in intents
+            )
+        ):
             target = await self._remembered_target(subject.recommended_offer, subject.recommended_specialisation)
 
         structured_answer: str | None = None
-        if "CATALOG" in intents:
+        if target_resolution.unavailable_label:
+            structured_answer = self.structured.unavailable_formation(
+                target_resolution.unavailable_label,
+                subject,
+                recommendation,
+            )
+        elif "CATALOG" in intents:
             structured_answer = await self.structured.catalogue_overview(message)
         elif "FEES" in intents:
-            structured_answer = await self.structured.fees(target)
+            structured_answer = await self.structured.fees(
+                target,
+                include_all=facts.scope is ContextScope.ALL,
+            )
+        elif "REGISTRATION_DOCUMENTS" in intents:
+            structured_answer = await self.structured.registration_documents(
+                target,
+                pre_registration_completed=subject.pre_registration_completed,
+            )
+        elif "PROFILE_RECALL" in intents:
+            structured_answer = self.structured.profile_summary(subject)
         elif "ORIENTATION" in intents and recommendation is not None:
             structured_answer = await self.structured.orientation(subject, recommendation)
         elif "PREINSCRIPTION" in intents and target is not None:
@@ -276,18 +309,17 @@ class ChatOrchestrator:
             ):
                 structured_answer = await self.structured.next_detail_step(target)
             else:
-                structured_answer = await self.structured.formation_details(target, intents)
+                structured_answer = await self.structured.formation_details(
+                    target,
+                    intents,
+                    include_all=facts.scope is ContextScope.ALL,
+                )
 
         if structured_answer:
             answer = structured_answer
             if recommendation and recommendation.primary:
                 subject.recommended_offer = recommendation.primary.formation_code
                 subject.recommended_specialisation = recommendation.primary.specialisation_code
-                if (
-                    "PREINSCRIPTION" not in intents
-                    and self.cta.should_add(state, subject, intents, act, recommendation)
-                ):
-                    answer = self.cta.add(answer, subject, state.turn_count)
                 subject.offer_intro_done = True
                 subject.last_recommendation_turn = state.turn_count
                 subject.conversion_stage = ConversionStage.RECOMMENDATION
@@ -308,6 +340,10 @@ class ChatOrchestrator:
                     target.specialisation.code if target.specialisation else None
                 )
                 subject.conversion_stage = ConversionStage.EXPLORATION
+            subject.pending_action = self._next_pending_action(
+                intents,
+                target=target,
+            )
             subject.last_intents = intents
             subject.last_scope = facts.scope.value
             subject.last_dialogue_act = act.value
@@ -422,6 +458,26 @@ class ChatOrchestrator:
             recommendation=recommendation,
         )
 
+    @staticmethod
+    def _next_pending_action(
+        intents: list[str],
+        *,
+        target: AcademicTarget | None,
+    ) -> str | None:
+        if "PREINSCRIPTION" in intents or "PROFILE_RECALL" in intents:
+            return None
+        if "FEES" in intents:
+            return "PREINSCRIPTION"
+        if "DIFFICULTY" in intents or "ORIENTATION" in intents:
+            return "PROGRAMME"
+        if {"PROGRAMME", "DETAILS"}.intersection(intents):
+            if target is not None and target.specialisation is None:
+                return None
+            return "PREINSCRIPTION"
+        if {"CAREERS", "MARKET", "CERTIFICATIONS", "INTERNATIONAL"}.intersection(intents):
+            return "PREINSCRIPTION"
+        return None
+
     def _fixed(
         self,
         message: str,
@@ -495,8 +551,8 @@ class ChatOrchestrator:
         if subject.profile is AcademicProfile.NEW_BAC and subject.bac_specialty in {"MATH", "SCIENCES"}:
             parts.append(
                 "Règle de conseil: après un bac Mathématiques ou Sciences expérimentales, "
-                "présenter le Cycle Préparatoire comme voie prioritaire et les licences "
-                "confirmées admissibles comme alternatives; ne jamais proposer une admission "
+                "présenter d'abord les licences confirmées admissibles, puis le Cycle "
+                "Préparatoire comme autre voie possible; ne jamais proposer une admission "
                 "directe en cycle ingénieur."
             )
         elif subject.profile is AcademicProfile.NEW_BAC and subject.bac_specialty:

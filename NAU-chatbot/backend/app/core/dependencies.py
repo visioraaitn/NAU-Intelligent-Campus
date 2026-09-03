@@ -8,20 +8,24 @@ from redis.asyncio import Redis
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import Settings, get_settings
-from app.core.exceptions import AuthenticationError
-from app.core.security import AuthService
+from app.core.exceptions import AuthenticationError, AuthorizationError
+from app.core.security import AuthPrincipal, AuthService
 from app.infrastructure.chroma import AsyncChromaRepository
 from app.infrastructure.db import get_session
-from app.infrastructure.inference import HttpInferenceClient
+from app.infrastructure.inference import HttpInferenceClient, HttpSpeechClient
 from app.infrastructure.redis import get_redis
 from app.infrastructure.redis.event_publisher import RedisAcademicEventPublisher
 from app.repositories.academic import (
     FormationRepository,
     OrientationRuleRepository,
 )
+from app.repositories.conversations import ConversationRepository
+from app.repositories.identity import UserAccountRepository
 from app.services.academic.catalog_service import AcademicCatalogService
 from app.services.admin.academic_service import AcademicAdminService
 from app.services.admin.rag_service import RagAdminService
+from app.services.conversation_service import ConversationService
+from app.services.identity_service import IdentityService
 from app.services.dialogue.orchestrator import ChatOrchestrator
 from app.services.eligibility import EligibilityService
 from app.services.memory import RedisConversationMemory, SessionLockManager
@@ -47,12 +51,37 @@ def inference_dependency(request: Request) -> HttpInferenceClient:
     return request.app.state.inference
 
 
+def speech_inference_dependency(request: Request) -> HttpSpeechClient:
+    return request.app.state.speech_inference
+
+
 def chroma_dependency(request: Request) -> AsyncChromaRepository:
     return request.app.state.chroma
 
 
-def auth_service(request: Request) -> AuthService:
-    return request.app.state.auth
+def auth_service(
+    redis: Redis = Depends(redis_dependency),
+    settings: Settings = Depends(settings_dependency),
+    session: AsyncSession = Depends(get_session),
+) -> AuthService:
+    return AuthService(redis, settings, UserAccountRepository(session))
+
+
+def identity_service(
+    session: AsyncSession = Depends(get_session),
+    auth: AuthService = Depends(auth_service),
+) -> IdentityService:
+    return IdentityService(session, UserAccountRepository(session), auth)
+
+
+async def require_principal(
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer),
+    auth: AuthService = Depends(auth_service),
+) -> AuthPrincipal:
+    if credentials is None or credentials.scheme.lower() != "bearer":
+        raise AuthenticationError()
+    claims = auth.decode(credentials.credentials, expected_type="access")
+    return await auth.principal_from_claims(claims)
 
 
 async def require_admin(
@@ -62,7 +91,27 @@ async def require_admin(
     if credentials is None or credentials.scheme.lower() != "bearer":
         raise AuthenticationError()
     claims = auth.decode(credentials.credentials, expected_type="access")
-    return str(claims["sub"])
+    principal = await auth.principal_from_claims(claims)
+    if principal.role != "ADMIN":
+        raise AuthorizationError()
+    return principal.subject
+
+
+async def require_user(
+    principal: AuthPrincipal = Depends(require_principal),
+) -> AuthPrincipal:
+    if principal.role != "USER" or principal.user_id is None:
+        raise AuthorizationError()
+    return principal
+
+
+async def require_chat_user(
+    principal: AuthPrincipal = Depends(require_principal),
+    identity: IdentityService = Depends(identity_service),
+) -> AuthPrincipal:
+    if principal.role == "USER" and principal.user_id is None:
+        raise AuthorizationError()
+    return await identity.ensure_chat_principal(principal)
 
 
 def rate_limiter(redis: Redis = Depends(redis_dependency)) -> RedisRateLimiter:
@@ -110,6 +159,13 @@ def memory_service(
     settings: Settings = Depends(settings_dependency),
 ) -> RedisConversationMemory:
     return RedisConversationMemory(redis, settings)
+
+
+def conversation_service(
+    session: AsyncSession = Depends(get_session),
+    memory: RedisConversationMemory = Depends(memory_service),
+) -> ConversationService:
+    return ConversationService(session, ConversationRepository(session), memory)
 
 
 def lock_service(

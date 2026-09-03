@@ -99,12 +99,19 @@ async def seed_academic(session: AsyncSession, payload: Mapping[str, Any]) -> di
 
     element_count = 0
     for row in payload.get("formation_elements", []):
+        parcours_code = row.get("parcours_code")
+        parcours = parcours_by_code.get(parcours_code) if parcours_code else None
+        if parcours_code and parcours is None:
+            raise ValueError(f"unknown parcours code for formation element: {parcours_code}")
         formation_code = row.get("formation_code")
         formation = formations_by_code.get(formation_code) if formation_code else None
+        if parcours is not None and formation is not None:
+            raise ValueError("a formation element cannot target a parcours and a formation")
         spec_code = row.get("specialisation_code")
         spec = specs_by_key.get((formation_code, spec_code)) if spec_code else None
         code = row.get("code")
         identity: dict[str, Any] = {
+            "parcours_id": parcours.id if parcours else None,
             "formation_id": formation.id if formation else None,
             "specialisation_id": spec.id if spec else None,
             "type_element": row["type_element"],
@@ -116,7 +123,12 @@ async def seed_academic(session: AsyncSession, payload: Mapping[str, Any]) -> di
             identity["nom"] = row["nom"]
         values = _values(
             row,
-            omit={"formation_code", "specialisation_code", *identity.keys()},
+            omit={
+                "parcours_code",
+                "formation_code",
+                "specialisation_code",
+                *identity.keys(),
+            },
         )
         await _upsert(session, FormationElement, identity, values)
         element_count += 1
@@ -124,20 +136,36 @@ async def seed_academic(session: AsyncSession, payload: Mapping[str, Any]) -> di
 
     tariff_count = 0
     for row in payload.get("tarifs", []):
-        formation = formations_by_code[row["formation_code"]]
+        parcours_code = row.get("parcours_code")
+        parcours = parcours_by_code.get(parcours_code) if parcours_code else None
+        formation_code = row.get("formation_code")
+        formation = formations_by_code.get(formation_code) if formation_code else None
+        if parcours_code and parcours is None:
+            raise ValueError(f"unknown parcours code for tariff: {parcours_code}")
+        if parcours is not None and formation is not None:
+            raise ValueError("a tariff cannot target a parcours and a formation")
+        if parcours is None and formation is None:
+            raise ValueError("a tariff must target a parcours or a formation")
         spec_code = row.get("specialisation_code")
-        spec = specs_by_key.get((row["formation_code"], spec_code)) if spec_code else None
+        spec = specs_by_key.get((formation_code, spec_code)) if spec_code else None
         identity = {
-            "formation_id": formation.id,
+            "parcours_id": parcours.id if parcours else None,
+            "formation_id": formation.id if formation else None,
             "specialisation_id": spec.id if spec else None,
-            "langue_enseignement": row["langue_enseignement"],
+            "langue_enseignement": row.get("langue_enseignement"),
             "source_ref": row.get("source_ref"),
             "statut": row.get("statut", "INDICATIF"),
             "annee_universitaire": row.get("annee_universitaire"),
         }
         values = _values(
             row,
-            omit={"code", "formation_code", "specialisation_code", *identity.keys()},
+            omit={
+                "code",
+                "parcours_code",
+                "formation_code",
+                "specialisation_code",
+                *identity.keys(),
+            },
         )
         for money_field in ("frais_inscription", "mensualite"):
             if values.get(money_field) is not None:

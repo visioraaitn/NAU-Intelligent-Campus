@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import re
 from decimal import Decimal
 
+from app.domain.academic.enums import FormationElementType
 from app.domain.conversation.models import AcademicProfile, SubjectState
 from app.domain.recommendation.schemas import (
     RecommendationDecision,
@@ -9,6 +11,7 @@ from app.domain.recommendation.schemas import (
 )
 from app.repositories.academic import PageRequest
 from app.services.academic.catalog_service import AcademicCatalogService
+from app.services.academic.element_resolution import AcademicElementResolutionService
 from app.services.academic.target_resolver import AcademicTarget
 from app.services.dialogue.human_labels import value_label
 from app.services.dialogue.normalizer import contains_phrase, fold_text
@@ -73,9 +76,19 @@ class StructuredResponseBuilder:
         )
         return "\n".join(lines)
 
-    async def fees(self, target: AcademicTarget | None) -> str:
+    async def fees(
+        self,
+        target: AcademicTarget | None,
+        *,
+        include_all: bool = False,
+    ) -> str:
         if target is not None:
             formations = [target.formation]
+        elif not include_all:
+            return (
+                "Pour te donner le bon tarif sans mélanger les formations, indique-moi "
+                "la formation qui t'intéresse."
+            )
         else:
             formations = (
                 await self.catalogue.formations.list(PageRequest(page_size=100))
@@ -86,6 +99,7 @@ class StructuredResponseBuilder:
             )
 
         entries: list[tuple[object, object]] = []
+        seen_entries: set[tuple[object, ...]] = set()
         for formation in formations:
             tariffs = (
                 await self.catalogue.tarifs.list(
@@ -95,7 +109,24 @@ class StructuredResponseBuilder:
                     )
                 )
             ).items
-            entries.extend((formation, tariff) for tariff in tariffs)
+            for tariff in tariffs:
+                language = getattr(tariff, "langue_enseignement", None)
+                academic_year = getattr(tariff, "annee_universitaire", None)
+                status = getattr(tariff, "statut", None)
+                semantic_key = (
+                    formation.id,
+                    language,
+                    academic_year,
+                    tariff.frais_inscription,
+                    tariff.mensualite,
+                    tariff.nb_mensualites,
+                    tariff.devise,
+                    status,
+                )
+                if semantic_key in seen_entries:
+                    continue
+                seen_entries.add(semantic_key)
+                entries.append((formation, tariff))
 
         if not entries:
             formation_name = target.formation.nom if target else "cette formation"
@@ -124,9 +155,22 @@ class StructuredResponseBuilder:
             )
             if total is not None:
                 parts.append(f"total indicatif {_money(total)} {tariff.devise}")
-            lines.append(f"• {formation.nom} : " + " + ".join(parts) + ".")
+            qualifiers = []
+            language = getattr(tariff, "langue_enseignement", None)
+            if language:
+                qualifiers.append(_language_label(language))
+            academic_year = getattr(tariff, "annee_universitaire", None)
+            if academic_year:
+                qualifiers.append(academic_year)
+            context = f" ({' · '.join(qualifiers)})" if qualifiers else ""
+            amount = " + ".join(parts) if parts else "montant à confirmer"
+            lines.append(f"• {formation.nom}{context} : {amount}.")
         lines.append(
-            "Ces montants doivent être reconfirmés pour l'année universitaire visée. Veux-tu que je t'aide à préparer une pré-inscription ?"
+            "Paiement comptant : pour tous les parcours, un paiement au comptant donne une réduction de 5% sur le total des frais. "
+            "Les montants doivent être reconfirmés pour l'année universitaire visée."
+        )
+        lines.append(
+            "Veux-tu que je t'aide à préparer une pré-inscription ?"
         )
         return "\n".join(lines)
 
@@ -170,11 +214,11 @@ class StructuredResponseBuilder:
             bac = value_label(subject.bac_specialty or "")
             if formation.code == "PREPA_GENERAL":
                 lines.append(
-                    f"Avec ton bac {bac}, mon conseil prioritaire est le {formation.nom}."
+                    f"Puisque tu souhaites suivre une Prépa, ton bac {bac} te permet d'envisager le {formation.nom}."
                 )
             else:
                 lines.append(
-                    f"Avec ton bac {bac}, la voie IIT compatible que je te recommande est {formation.nom}."
+                    f"Avec ton bac {bac}, je te recommande d'abord les licences IIT admissibles. Une première piste à explorer est {formation.nom}."
                 )
         else:
             lines.append(
@@ -241,7 +285,7 @@ class StructuredResponseBuilder:
 
         if formation.code == "PREPA_GENERAL" and alternatives:
             lines.append(
-                "Tu préfères que je compare la Prépa MP, la Licence en Informatique et la Licence en Mécatronique selon ton projet et ta manière d'étudier ?"
+                "Veux-tu que je compare cette Prépa aux licences admissibles selon ton projet et ta manière d'étudier ?"
             )
         elif primary.specialisation_name:
             lines.append(
@@ -249,13 +293,75 @@ class StructuredResponseBuilder:
             )
         elif specs:
             lines.append(
-                "Laquelle de ces spécialisations veux-tu découvrir en détail ?"
+                "Veux-tu que je t'aide à choisir la spécialisation la plus adaptée à tes intérêts ?"
             )
         else:
             lines.append(
-                "Veux-tu voir le programme, les débouchés ou les frais de cette formation ?"
+                "Veux-tu voir le programme détaillé de cette formation ?"
             )
         return "\n".join(lines)
+
+    @staticmethod
+    def unavailable_formation(
+        requested_label: str,
+        subject: SubjectState,
+        decision: RecommendationDecision | None,
+    ) -> str:
+        lines = [
+            f"La formation « {requested_label} » ne figure pas dans le catalogue académique actif de l'IIT."
+        ]
+        options: list[str] = []
+        if decision and decision.primary:
+            options.append(decision.primary.formation_name)
+            options.extend(
+                option.formation_name
+                for option in decision.alternatives
+                if option.formation_name not in options
+            )
+        if options:
+            profile = (
+                f"ton bac {value_label(subject.bac_specialty)}"
+                if subject.profile is AcademicProfile.NEW_BAC
+                and subject.bac_specialty
+                else "ton profil académique"
+            )
+            if len(options) == 1:
+                lines.append(
+                    f"Selon les règles d'admission actives pour {profile}, la formation confirmée est {options[0]}."
+                )
+            else:
+                lines.append(
+                    f"Selon les règles d'admission actives pour {profile}, les formations confirmées sont :"
+                )
+                lines.extend(f"• {name}" for name in options)
+            lines.append("Veux-tu que je te présente cette possibilité en détail ?")
+        elif subject.profile is AcademicProfile.NEW_BAC and subject.bac_specialty:
+            lines.append(
+                f"Avec un bac {value_label(subject.bac_specialty)}, aucune formation IIT n'est actuellement confirmée comme admissible par les règles actives."
+            )
+        else:
+            lines.append(
+                "Indique-moi ton niveau actuel et, si tu as le bac, ta section : je vérifierai uniquement les formations réellement enregistrées et admissibles."
+            )
+        return "\n".join(lines)
+
+    @staticmethod
+    def profile_summary(subject: SubjectState) -> str:
+        if subject.profile is AcademicProfile.NEW_BAC:
+            if subject.bac_specialty:
+                return f"Tu m'as indiqué avoir un bac {value_label(subject.bac_specialty)}."
+            return "Tu m'as indiqué avoir le bac, mais ta section n'est pas encore précisée."
+        labels = {
+            AcademicProfile.PREPA_STUDENT: "être actuellement en cycle préparatoire",
+            AcademicProfile.PREPA_HOLDER: "avoir validé un cycle préparatoire",
+            AcademicProfile.LICENCE_STUDENT: "être actuellement en licence",
+            AcademicProfile.LICENCE_HOLDER: "être titulaire d'une licence",
+            AcademicProfile.MASTER_HOLDER: "être titulaire d'un mastère",
+        }
+        known = labels.get(subject.profile)
+        if known:
+            return f"Tu m'as indiqué {known}."
+        return "Tu ne m'as pas encore indiqué clairement ton niveau d'études actuel."
 
     @staticmethod
     def _distinct_alternatives(
@@ -289,6 +395,10 @@ class StructuredResponseBuilder:
         if formation.intitule_diplome:
             parts.append(f"diplôme : {formation.intitule_diplome}")
         lines = ["• " + " — ".join(parts) + "."]
+        if formation.code == "PREPA_GENERAL":
+            lines.append(
+                "  Autre voie possible pour préparer une poursuite vers un cycle ingénieur."
+            )
         if specs:
             lines.append(
                 "  Spécialisations : " + ", ".join(item.nom for item in specs) + "."
@@ -330,7 +440,7 @@ class StructuredResponseBuilder:
             if formation.code == "PREPA_GENERAL":
                 option_name = specs[0].nom if specs else "Mathématiques-Physique"
                 lines.append(
-                    f"• {formation.nom}, option {option_name} — {duration} : voie prioritaire si ton objectif est le cycle ingénieur."
+                    f"• {formation.nom}, option {option_name} — {duration} : autre voie possible pour préparer une poursuite vers un cycle ingénieur."
                 )
                 difficulty = self._difficulty(elements)
                 if difficulty:
@@ -353,7 +463,7 @@ class StructuredResponseBuilder:
                 if competencies:
                     lines.append("  Axes principaux : " + ", ".join(competencies) + ".")
         lines.append(
-            "Tu te vois plutôt dans un rythme intensif en maths-physique, dans l'informatique, ou dans la mécatronique et les systèmes intelligents ?"
+            "Parmi ces parcours, quel domaine correspond le mieux à ton projet et à ta manière d'étudier ?"
         )
         return "\n".join(lines)
 
@@ -375,6 +485,8 @@ class StructuredResponseBuilder:
         self,
         target: AcademicTarget,
         intents: list[str],
+        *,
+        include_all: bool = False,
     ) -> str:
         formation = target.formation
         specs = (
@@ -438,8 +550,20 @@ class StructuredResponseBuilder:
                 lines.append("Niveau d'exigence : " + difficulty)
             else:
                 lines.append(
-                    "Le niveau d'exigence n'est pas décrit précisément dans la base active."
+                    "Je ne peux pas qualifier cette formation de facile ou difficile pour tout le monde : le niveau d'exigence n'est pas décrit précisément dans la base active."
                 )
+                study_topics = [
+                    item.nom
+                    for item in relevant
+                    if item.type_element.value
+                    in {"CONTENU_PROGRAMME", "MODULE", "COMPETENCE"}
+                ][:4]
+                if study_topics:
+                    lines.append(
+                        "Pour réussir, il faut notamment travailler régulièrement : "
+                        + ", ".join(study_topics)
+                        + "."
+                    )
 
         if "MARKET" in intents:
             opportunities = [
@@ -469,11 +593,15 @@ class StructuredResponseBuilder:
                 }
             ]
             if contents and (target.specialisation is not None or not specs):
-                lines.append("Contenus et compétences : " + ", ".join(contents[:8]) + ".")
+                displayed_contents = contents if include_all else contents[:8]
+                lines.append("Contenus et compétences : " + ", ".join(displayed_contents) + ".")
 
-        lines.append(
-            "Veux-tu maintenant comparer les spécialisations, voir les frais ou commencer les étapes de pré-inscription ?"
-        )
+        if "DIFFICULTY" in intents:
+            lines.append("Veux-tu voir le programme détaillé de cette formation ?")
+        elif target.specialisation is None and specs:
+            lines.append("Laquelle de ces spécialisations veux-tu approfondir ?")
+        else:
+            lines.append("Souhaites-tu ensuite préparer une pré-inscription ?")
         return "\n".join(lines)
 
     async def next_detail_step(self, target: AcademicTarget) -> str:
@@ -498,6 +626,56 @@ class StructuredResponseBuilder:
             "Quelle information veux-tu approfondir maintenant : programme, certifications, international, débouchés ou frais ?"
         )
 
+    async def registration_documents(
+        self,
+        target: AcademicTarget | None,
+        *,
+        pre_registration_completed: bool,
+    ) -> str:
+        if target is None:
+            return (
+                "Pour te donner la bonne liste de documents sans mélanger les parcours, "
+                "indique-moi la formation concernée."
+            )
+
+        effective_elements = await AcademicElementResolutionService(
+            self.catalogue.elements
+        ).resolve_effective_elements(
+            target.formation.parcours_id,
+            target.formation.id,
+            target.specialisation.id if target.specialisation else None,
+            types=(FormationElementType.DOCUMENT_INSCRIPTION,),
+        )
+        documents = [item.element for item in effective_elements]
+        if not documents:
+            return (
+                f"Les documents d'inscription de {target.formation.nom} ne sont pas "
+                "renseignés dans la base académique active. Je préfère ne pas inventer "
+                "de pièces à fournir."
+            )
+
+        if pre_registration_completed:
+            remaining_documents = [
+                document
+                for document in documents
+                if document.code != "DOC_PREINSCRIPTION"
+            ]
+            lines = [
+                "Puisque tu as déjà effectué la pré-inscription, voici les documents "
+                f"restants enregistrés pour {target.formation.nom} :"
+            ]
+        else:
+            remaining_documents = documents
+            lines = [
+                f"Voici les éléments du dossier d'inscription enregistrés pour {target.formation.nom} :"
+            ]
+
+        if not remaining_documents:
+            lines.append("• Aucun autre document n'est renseigné.")
+        else:
+            lines.extend(f"• {document.nom}" for document in remaining_documents)
+        return "\n".join(lines)
+
     async def pre_registration(self, target: AcademicTarget) -> str:
         formation = target.formation
         elements = (
@@ -505,16 +683,33 @@ class StructuredResponseBuilder:
                 PageRequest(page_size=100, filters={"formation_id": formation.id})
             )
         ).items
+
         procedure = next(
             (
                 item.description
                 for item in elements
                 if item.type_element.value == "INFORMATION"
                 and item.description
-                and "pré-inscription" in item.description.casefold()
+                and (
+                    "pré-inscription" in item.description.casefold()
+                    or "pre-inscription" in item.description.casefold()
+                    or "préinscription" in item.description.casefold()
+                )
             ),
             None,
         )
+
+        admission_link = next(
+            (
+                match.group(0)
+                for item in elements
+                if item.description
+                for match in [re.search(r"https?://\S+", item.description)]
+                if match
+            ),
+            "https://iit.tn/admission/procedure-et-frais-dinscription/",
+        )
+
         global_elements = (
             await self.catalogue.elements.list(
                 PageRequest(page_size=100, filters={"formation_id": None})
@@ -530,19 +725,27 @@ class StructuredResponseBuilder:
             ),
             None,
         )
+
         lines = [
-            f"Très bien, tu peux passer à l'étape de pré-inscription pour {formation.nom}."
+            f"Très bien, pour {formation.nom}, la démarche recommandée est la pré-inscription suivie du dossier d'admission."
         ]
+        lines.append(
+            "Tu peux commencer dès maintenant via ce lien : "
+            f"{admission_link}"
+        )
+        lines.append(
+            "Important : pour tous les parcours, un paiement comptant donne une réduction de 5% sur le total des frais."
+        )
         if procedure:
             lines.append(procedure)
         else:
             lines.append(
-                "La procédure détaillée de cette formation n'est pas renseignée dans la base active; l'équipe IIT doit confirmer les pièces et étapes exactes."
+                "La procédure détaillée de cette formation est disponible dans la base académique active et doit être confirmée avec l'IIT pour les pièces exactes et les dates de dépôt."
             )
         if contact:
-            lines.append(contact)
+            lines.append(_public_contact(contact, include_department=formation.code == "INGENIEUR_INFO"))
         lines.append(
-            "Souhaites-tu d'abord vérifier les frais ou les conditions d'admission avant de contacter l'IIT ?"
+            "Si tu veux, je peux aussi te guider pour préparer le dossier ou vérifier les frais selon ton profil."
         )
         return "\n".join(lines)
 
@@ -552,6 +755,24 @@ def _money(value: object) -> str:
     if amount == amount.to_integral():
         return f"{int(amount):,}".replace(",", " ")
     return f"{amount:,.2f}".replace(",", " ").replace(".", ",")
+
+
+def _language_label(value: str) -> str:
+    return {
+        "FRANCAIS": "français",
+        "ANGLAIS": "anglais",
+    }.get(value.upper(), value.replace("_", " ").lower())
+
+
+def _public_contact(value: str, *, include_department: bool) -> str:
+    if include_department:
+        return value
+    sentences = re.split(r"(?<=[.!?])\s+", value.strip())
+    return " ".join(
+        sentence
+        for sentence in sentences
+        if "génie informatique" not in sentence.casefold()
+    )
 
 
 def _annual_total(

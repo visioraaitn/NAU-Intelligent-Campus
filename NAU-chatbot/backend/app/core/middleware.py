@@ -1,20 +1,28 @@
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from uuid import UUID, uuid4
 
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 
 class RequestSizeLimitMiddleware:
-    def __init__(self, app: ASGIApp, max_bytes: int) -> None:
+    def __init__(
+        self,
+        app: ASGIApp,
+        max_bytes: int,
+        path_limits: Mapping[str, int] | None = None,
+    ) -> None:
         self.app = app
         self.max_bytes = max_bytes
+        self.path_limits = dict(path_limits or {})
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] != "http":
             await self.app(scope, receive, send)
             return
+        max_bytes = self.path_limits.get(str(scope.get("path", "")), self.max_bytes)
         headers = dict(scope.get("headers", []))
         content_length = headers.get(b"content-length")
         if content_length:
@@ -23,7 +31,7 @@ class RequestSizeLimitMiddleware:
             except ValueError:
                 await self._reject(send)
                 return
-            if declared_length < 0 or declared_length > self.max_bytes:
+            if declared_length < 0 or declared_length > max_bytes:
                 await self._reject(send)
                 return
         chunks: list[bytes] = []
@@ -36,7 +44,7 @@ class RequestSizeLimitMiddleware:
                 continue
             body = message.get("body", b"")
             received += len(body)
-            if received > self.max_bytes:
+            if received > max_bytes:
                 await self._reject(send)
                 return
             chunks.append(body)
@@ -73,7 +81,7 @@ class SecurityHeadersMiddleware:
                         (b"x-content-type-options", b"nosniff"),
                         (b"x-frame-options", b"DENY"),
                         (b"referrer-policy", b"no-referrer"),
-                        (b"permissions-policy", b"camera=(), microphone=(), geolocation=()"),
+                        (b"permissions-policy", b"camera=(), microphone=(self), geolocation=()"),
                         (b"content-security-policy", b"default-src 'none'; frame-ancestors 'none'"),
                         (b"cache-control", b"no-store"),
                     ]

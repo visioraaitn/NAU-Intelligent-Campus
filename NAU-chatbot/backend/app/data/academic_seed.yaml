@@ -45,43 +45,85 @@ specialisations:
   - {formation_code: LICENCE_INFO, code: LIC_INFO_IOT, nom: "Systèmes Embarqués & IoT", description: null, ordre_affichage: 4, source_ref: FLYER_LICENCE_INFO, actif: true}
 
 tarifs:
+  - code: TARIF_PREPA_INSCRIPTION
+    parcours_code: PREPA
+    formation_code: null
+    specialisation_code: null
+    frais_inscription: 800.00
+    mensualite: null
+    nb_mensualites: null
+    langue_enseignement: null
+    devise: TND
+    annee_universitaire: null
+    statut: INDICATIF
+    remarque: "Droit d'inscription commun au cycle pour les étudiants tunisiens."
+    source_ref: SRC_PREPA
+    actif: true
   - code: TARIF_PREPA_GENERAL_INDICATIF
     formation_code: PREPA_GENERAL
     specialisation_code: null
-    frais_inscription: 800.00
+    frais_inscription: null
     mensualite: 556.00
     nb_mensualites: 9
     langue_enseignement: FRANCAIS
     devise: TND
     annee_universitaire: null
     statut: INDICATIF
-    remarque: "La page publique affiche 556 DT par mois sur 9 mois pour la première année, à titre indicatif. Un droit d'inscription de 800 DT est indiqué pour les étudiants tunisiens."
+    remarque: "La page publique affiche 556 DT par mois sur 9 mois pour la première année, à titre indicatif."
     source_ref: SRC_PREPA
+    actif: true
+  - code: TARIF_LICENCE_INSCRIPTION
+    parcours_code: LICENCE
+    formation_code: null
+    specialisation_code: null
+    frais_inscription: 800.00
+    mensualite: null
+    nb_mensualites: null
+    langue_enseignement: null
+    devise: TND
+    annee_universitaire: null
+    statut: INDICATIF
+    remarque: "Droit d'inscription commun au cycle pour les étudiants tunisiens."
+    source_ref: SRC_LICENCE_GLSI
     actif: true
   - code: TARIF_LICENCE_INFO_INDICATIF
     formation_code: LICENCE_INFO
     specialisation_code: null
-    frais_inscription: 800.00
+    frais_inscription: null
     mensualite: 667.00
     nb_mensualites: 9
     langue_enseignement: FRANCAIS
     devise: TND
     annee_universitaire: null
     statut: INDICATIF
-    remarque: "La page publique affiche 667 DT par mois sur 9 mois pour la première année, à titre indicatif. Un droit d'inscription de 800 DT est indiqué pour les étudiants tunisiens."
+    remarque: "La page publique affiche 667 DT par mois sur 9 mois pour la première année, à titre indicatif."
     source_ref: SRC_LICENCE_GLSI
+    actif: true
+  - code: TARIF_INGENIEUR_INSCRIPTION
+    parcours_code: INGENIEUR
+    formation_code: null
+    specialisation_code: null
+    frais_inscription: 800.00
+    mensualite: null
+    nb_mensualites: null
+    langue_enseignement: null
+    devise: TND
+    annee_universitaire: null
+    statut: INDICATIF
+    remarque: "Droit d'inscription commun au cycle pour les étudiants tunisiens."
+    source_ref: SRC_GENIE_INFO
     actif: true
   - code: TARIF_INGENIEUR_INFO_INDICATIF
     formation_code: INGENIEUR_INFO
     specialisation_code: null
-    frais_inscription: 800.00
+    frais_inscription: null
     mensualite: 778.00
     nb_mensualites: 9
     langue_enseignement: FRANCAIS
     devise: TND
     annee_universitaire: null
     statut: INDICATIF
-    remarque: "La page publique affiche 778 DT par mois sur 9 mois pour la première année, à titre indicatif. Un droit d'inscription de 800 DT est indiqué pour les étudiants tunisiens."
+    remarque: "La page publique affiche 778 DT par mois sur 9 mois pour la première année, à titre indicatif."
     source_ref: SRC_GENIE_INFO
     actif: true
 
@@ -478,6 +520,33 @@ formation_elements:
   - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: MODULE, code: MOD_ARSI_DEVSECOPS, nom: DevSecOps, source_ref: SRC_GENIE_INFO, actif: true}
   - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: INFORMATION, code: INFO_ARSI_PROGRAMME, nom: "ARSI - Programme et orientation", description: "ARSI couvre notamment réseaux, administration systèmes, cybersécurité, infrastructures cloud et DevSecOps.", source_ref: SRC_GENIE_INFO, actif: true}
   - {formation_code: INGENIEUR_INFO, specialisation_code: ARSI, type_element: INFORMATION, code: INFO_ARSI_CAREERS, nom: "ARSI - Débouchés publics", description: "Les perspectives citées incluent administration réseaux et systèmes, ingénierie réseaux/cybersécurité, DevSecOps, audit et sécurité Cloud/IoT; elles ne garantissent pas un emploi.", source_ref: SRC_GENIE_INFO, actif: true}
+  - {formation_code: null, type_element: LIEN_PREINSCRIPTION, code: PREINSCRIPTION_URL, nom: "Préinscription IIT", valeur: "https://pre-inscription.iitadmin.com//?fbclid=IwAR1CfciROXUxaOBiXCcmv7DikLDQjD-8cKzEzuVLS9bEsnnZncSTAy96nzY", ordre_affichage: 1, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: PREPA, type_element: DOCUMENT_INSCRIPTION, code: DOC_BAC, nom: "Copie conforme du diplôme du Baccalauréat", ordre_affichage: 10, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: PREPA, type_element: DOCUMENT_INSCRIPTION, code: DOC_RELEVE_BAC, nom: "Relevé de notes du Baccalauréat", ordre_affichage: 20, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: PREPA, type_element: DOCUMENT_INSCRIPTION, code: DOC_PHOTOS, nom: "3 photos", ordre_affichage: 50, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: PREPA, type_element: DOCUMENT_INSCRIPTION, code: DOC_REGLEMENT, nom: "Règlement intérieur avec signature légalisée à la Municipalité", ordre_affichage: 60, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: PREPA, type_element: DOCUMENT_INSCRIPTION, code: DOC_CIN, nom: "Copie CIN", ordre_affichage: 70, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: PREPA, type_element: DOCUMENT_INSCRIPTION, code: DOC_PREINSCRIPTION, nom: "Pré-inscription", ordre_affichage: 80, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: LICENCE, type_element: DOCUMENT_INSCRIPTION, code: DOC_BAC, nom: "Copie conforme du diplôme du Baccalauréat", ordre_affichage: 10, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: LICENCE, type_element: DOCUMENT_INSCRIPTION, code: DOC_RELEVE_BAC, nom: "Relevé de notes du Baccalauréat", ordre_affichage: 20, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: LICENCE, type_element: DOCUMENT_INSCRIPTION, code: DOC_PHOTOS, nom: "3 photos", ordre_affichage: 50, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: LICENCE, type_element: DOCUMENT_INSCRIPTION, code: DOC_REGLEMENT, nom: "Règlement intérieur avec signature légalisée à la Municipalité", ordre_affichage: 60, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: LICENCE, type_element: DOCUMENT_INSCRIPTION, code: DOC_CIN, nom: "Copie CIN", ordre_affichage: 70, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: LICENCE, type_element: DOCUMENT_INSCRIPTION, code: DOC_PREINSCRIPTION, nom: "Pré-inscription", ordre_affichage: 80, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_BAC, nom: "Copie conforme du diplôme du Baccalauréat", ordre_affichage: 10, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_RELEVE_BAC, nom: "Relevé de notes du Baccalauréat", ordre_affichage: 20, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_PHOTOS, nom: "3 photos", ordre_affichage: 50, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_REGLEMENT, nom: "Règlement intérieur avec signature légalisée à la Municipalité", ordre_affichage: 60, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_CIN, nom: "Copie CIN", ordre_affichage: 70, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_PREINSCRIPTION, nom: "Pré-inscription", ordre_affichage: 80, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: ARCHITECTURE, type_element: DOCUMENT_INSCRIPTION, code: DOC_BAC, nom: "Copie conforme du diplôme du Baccalauréat", ordre_affichage: 10, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: ARCHITECTURE, type_element: DOCUMENT_INSCRIPTION, code: DOC_RELEVE_BAC, nom: "Relevé de notes du Baccalauréat", ordre_affichage: 20, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: ARCHITECTURE, type_element: DOCUMENT_INSCRIPTION, code: DOC_PHOTOS, nom: "3 photos", ordre_affichage: 50, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: ARCHITECTURE, type_element: DOCUMENT_INSCRIPTION, code: DOC_REGLEMENT, nom: "Règlement intérieur avec signature légalisée à la Municipalité", ordre_affichage: 60, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: ARCHITECTURE, type_element: DOCUMENT_INSCRIPTION, code: DOC_CIN, nom: "Copie CIN", ordre_affichage: 70, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: ARCHITECTURE, type_element: DOCUMENT_INSCRIPTION, code: DOC_PREINSCRIPTION, nom: "Pré-inscription", ordre_affichage: 80, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_LICENCE, nom: "Copie conforme du diplôme de Licence", ordre_affichage: 30, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
+  - {parcours_code: INGENIEUR, type_element: DOCUMENT_INSCRIPTION, code: DOC_RELEVES_LICENCE, nom: "3 relevés de notes de Licence", ordre_affichage: 40, source_ref: PROJECT_ENROLLMENT_SCOPE_V2, actif: true}
   - {formation_code: INGENIEUR_INFO, type_element: INFORMATION, code: INFO_ING_ADMISSION, nom: "Cycle Génie Informatique - Admission", description: "La candidature se fait par pré-inscription, puis étude de dossier et entretien de validation. L'admission finale n'est pas automatique.", source_ref: SRC_IIT_ADMISSION, actif: true}
   - {formation_code: INGENIEUR_INFO, type_element: INFORMATION, code: INFO_ING_DUREE, nom: "Cycle Génie Informatique - Durée", description: "Le guide étudiant public indique une durée de 3 ans après une Licence LMD ou un diplôme équivalent.", source_ref: SRC_GUIDE_ETUDIANT, actif: true}
   - {formation_code: INGENIEUR_INFO, type_element: INFORMATION, code: INFO_ING_PEDAGOGIE, nom: "Génie Informatique - Pédagogie et projets", description: "Le programme combine bases théoriques, projets appliqués, travail en équipe, communication et gestion de projets d'ingénierie.", source_ref: SRC_GENIE_INFO, actif: true}

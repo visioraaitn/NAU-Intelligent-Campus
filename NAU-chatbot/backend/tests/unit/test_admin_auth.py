@@ -1,14 +1,28 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+from uuid import uuid4
+
 import pytest
 from fastapi.security import HTTPAuthorizationCredentials
 
-from app.core.dependencies import require_admin
-from app.core.exceptions import AuthenticationError
+from app.core.dependencies import require_admin, require_user
+from app.core.exceptions import AuthenticationError, AuthorizationError
 from app.core.security import AuthService, verify_csrf
 
 
 pytestmark = [pytest.mark.unit, pytest.mark.asyncio]
+
+
+class FakeUserStore:
+    def __init__(self, user) -> None:
+        self.user = user
+
+    async def get_by_email(self, email: str):
+        return self.user if email == self.user.email else None
+
+    async def get(self, user_id):
+        return self.user if user_id == self.user.id else None
 
 
 async def test_admin_login_issues_a_scoped_access_and_refresh_pair(
@@ -36,6 +50,44 @@ async def test_invalid_admin_credentials_are_rejected(fake_redis, test_settings)
         await auth.login("catalog-admin", "wrong-password")
     with pytest.raises(AuthenticationError, match="Identifiants invalides"):
         await auth.login("unknown-admin", "correct-horse-battery-staple")
+
+
+async def test_user_login_uses_existing_hashing_and_carries_user_role(
+    fake_redis,
+    test_settings,
+) -> None:
+    user = SimpleNamespace(
+        id=uuid4(),
+        name="Ahmed Test",
+        email="ahmed@example.com",
+        password_hash=AuthService(fake_redis, test_settings).hash_password("user-password"),
+        role="USER",
+        active=True,
+    )
+    auth = AuthService(fake_redis, test_settings, FakeUserStore(user))
+
+    pair = await auth.login("AHMED@EXAMPLE.COM", "user-password")
+    claims = auth.decode(pair.access_token, expected_type="access")
+    principal = await auth.principal_from_claims(claims)
+    rotated = await auth.refresh(pair.refresh_token)
+    rotated_principal = await auth.principal_from_claims(
+        auth.decode(rotated.access_token, expected_type="access")
+    )
+
+    assert claims["role"] == "USER"
+    assert principal.user_id == user.id
+    assert principal.email == user.email
+    assert rotated_principal.user_id == user.id
+    assert await require_user(principal=principal) == principal
+
+    with pytest.raises(AuthorizationError):
+        await require_admin(
+            credentials=HTTPAuthorizationCredentials(
+                scheme="Bearer",
+                credentials=pair.access_token,
+            ),
+            auth=auth,
+        )
 
 
 async def test_refresh_token_is_rotated_and_cannot_be_replayed(
@@ -92,4 +144,3 @@ async def test_csrf_requires_equal_nonempty_cookie_and_header_values() -> None:
     ):
         with pytest.raises(AuthenticationError, match="CSRF"):
             verify_csrf(cookie, header)
-

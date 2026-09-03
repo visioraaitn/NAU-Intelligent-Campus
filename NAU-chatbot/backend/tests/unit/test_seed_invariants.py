@@ -77,6 +77,63 @@ def test_seed_assigns_the_requested_teaching_languages(seed) -> None:
         assert set(formation["langues_enseignement"]) == expected
 
     for tarif in seed["tarifs"]:
-        assert tarif["langue_enseignement"] in formations[tarif["formation_code"]][
-            "langues_enseignement"
-        ]
+        if tarif.get("parcours_code"):
+            assert tarif.get("formation_code") is None
+            assert tarif["langue_enseignement"] is None
+        else:
+            assert tarif["langue_enseignement"] in formations[tarif["formation_code"]][
+                "langues_enseignement"
+            ]
+
+
+def test_registration_information_is_consolidated_by_business_scope(seed) -> None:
+    elements = seed["formation_elements"]
+    enrollment = [
+        item
+        for item in elements
+        if item.get("source_ref") == "PROJECT_ENROLLMENT_SCOPE_V2"
+    ]
+
+    global_preinscription = [
+        item for item in enrollment if item.get("type_element") == "LIEN_PREINSCRIPTION"
+    ]
+    parcours_documents = [
+        item for item in enrollment if item.get("type_element") == "DOCUMENT_INSCRIPTION"
+    ]
+
+    assert len(global_preinscription) == 1
+    assert global_preinscription[0].get("formation_code") is None
+    assert "pre-inscription.iitadmin.com" in global_preinscription[0]["valeur"]
+    assert set(item["parcours_code"] for item in parcours_documents) == {
+        "PREPA",
+        "LICENCE",
+        "INGENIEUR",
+        "ARCHITECTURE",
+    }
+    assert all(item.get("formation_code") is None for item in parcours_documents)
+    assert all("800 DT" not in (item.get("description") or "") for item in enrollment)
+
+
+def test_common_registration_fees_are_cycle_scoped(seed) -> None:
+    common = [item for item in seed["tarifs"] if item.get("parcours_code")]
+
+    assert {item["parcours_code"] for item in common} == {"PREPA", "LICENCE", "INGENIEUR"}
+    assert all(item.get("formation_code") is None for item in common)
+    assert all(item["frais_inscription"] == 800 for item in common)
+    assert all(item["langue_enseignement"] is None for item in common)
+
+
+def test_engineer_registration_documents_are_not_duplicated_per_formation(seed) -> None:
+    elements = seed["formation_elements"]
+    duplicate_codes = {
+        item.get("code", "")
+        for item in elements
+        if item.get("formation_code")
+        and (
+            "PREINSCRIPTION" in item.get("code", "")
+            or "PAPIERS" in item.get("code", "")
+            or "PIECES" in item.get("code", "")
+        )
+    }
+
+    assert duplicate_codes == set()

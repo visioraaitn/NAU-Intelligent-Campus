@@ -16,8 +16,13 @@ export function useReferenceData(config: EntityConfig, extras: AcademicResource[
       if (column.reference) collected.add(column.reference);
       if (column.reference === "formations") collected.add("parcours");
     }
+    if (config.parcoursFilter) collected.add("parcours");
     if (config.formationFilter) collected.add("formations");
     if (config.specialisationFilter) collected.add("specialisations");
+    if (config.hierarchyContext) {
+      collected.add(config.hierarchyContext.reference);
+      collected.add(config.hierarchyContext.parentReference);
+    }
     return [...collected].sort();
   }, [config, extras]);
   const resourceKey = resources.join("|");
