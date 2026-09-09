@@ -86,6 +86,83 @@ def test_explicit_correction_can_replace_a_higher_ranked_profile() -> None:
 @pytest.mark.parametrize(
     "message",
     [
+        "ena njaht fel licence",
+        "j'ai réussi ma licence",
+        "j ai valide ma licence",
+        "j'ai obtenu ma licence",
+    ],
+)
+def test_successfully_completed_licence_is_a_holder_profile(message: str) -> None:
+    state = ConversationState.new(uuid4())
+    facts, negation = _extract(message, state)
+
+    ProfileResolver().apply(state, facts, negation)
+
+    assert facts.profile is AcademicProfile.LICENCE_HOLDER
+    assert state.active_state.profile is AcademicProfile.LICENCE_HOLDER
+
+
+def test_completed_licence_statement_does_not_create_a_fake_specialty() -> None:
+    facts, _ = _extract("ya weldi ena njaht fel licence sayey", ConversationState.new(uuid4()))
+
+    assert facts.profile is AcademicProfile.LICENCE_HOLDER
+    assert facts.licence_specialty is None
+
+
+def test_explicit_bac_denial_clears_a_previous_new_bac_profile() -> None:
+    state = ConversationState.new(uuid4())
+    subject = state.active_state
+    subject.profile = AcademicProfile.NEW_BAC
+    subject.bac_specialty = "SCIENCES"
+    subject.bac_average = 14
+    subject.math_grade = 12
+    subject.math_comfort = "MEDIUM"
+
+    facts, negation = _extract("manich bac", state)
+    ProfileResolver().apply(state, facts, negation)
+
+    assert facts.denies_bac is True
+    assert state.active_state.profile is AcademicProfile.UNKNOWN
+    assert state.active_state.bac_specialty is None
+    assert state.active_state.bac_average is None
+    assert state.active_state.math_grade is None
+
+
+def test_bac_denial_is_not_a_new_bac_fact() -> None:
+    facts, _ = _extract("manich bac", ConversationState.new(uuid4()))
+
+    assert facts.profile is None
+    assert facts.bac_specialty is None
+    assert facts.denies_bac is True
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
+        "ena kammelt el prepa",
+        "j'ai validé la prépa",
+        "prépa déjà réussie",
+    ],
+)
+def test_completed_prepa_is_a_holder_profile(message: str) -> None:
+    facts, _ = _extract(message, ConversationState.new(uuid4()))
+
+    assert facts.profile is AcademicProfile.PREPA_HOLDER
+
+
+def test_completed_prepa_with_continuation_goal_targets_engineering() -> None:
+    facts, _ = _extract(
+        "ena kammelt el prepa w jey nheb nkammel 9rayti ansahni",
+        ConversationState.new(uuid4()),
+    )
+
+    assert facts.profile is AcademicProfile.PREPA_HOLDER
+    assert facts.target == "ENGINEERING"
+
+
+@pytest.mark.parametrize(
+    "message",
+    [
         "j ai deja fait la preinscription",
         "c'est bon amlt preinscrit",
         "3amlt preinscrit chnouma lawra9",

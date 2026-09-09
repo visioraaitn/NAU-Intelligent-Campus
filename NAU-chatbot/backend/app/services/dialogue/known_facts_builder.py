@@ -5,16 +5,23 @@ from app.services.dialogue.human_labels import profile_label, value_label
 
 
 class KnownFactsBuilder:
-    def build(self, subject: SubjectState) -> tuple[str, str]:
-        known = [f"Situation actuelle : {profile_label(subject.profile)}"]
-        if subject.bac_specialty:
-            known.append(f"Section du bac : {value_label(subject.bac_specialty)}")
-        if subject.bac_average is not None:
-            known.append(f"Moyenne au bac : {subject.bac_average:g}/20")
-        if subject.math_grade is not None:
-            known.append(f"Note en mathématiques : {subject.math_grade:g}/20")
-        if subject.math_comfort:
-            known.append(f"Aisance en mathématiques : {value_label(subject.math_comfort)}")
+    def build(
+        self,
+        subject: SubjectState,
+        *,
+        include_profile: bool = True,
+    ) -> tuple[str, str]:
+        known: list[str] = []
+        if include_profile:
+            known.append(f"Situation actuelle : {profile_label(subject.profile)}")
+            if subject.bac_specialty:
+                known.append(f"Section du bac : {value_label(subject.bac_specialty)}")
+            if subject.bac_average is not None:
+                known.append(f"Moyenne au bac : {subject.bac_average:g}/20")
+            if subject.math_grade is not None:
+                known.append(f"Note en mathématiques : {subject.math_grade:g}/20")
+            if subject.math_comfort:
+                known.append(f"Aisance en mathématiques : {value_label(subject.math_comfort)}")
         if subject.licence_specialty:
             known.append(f"Spécialité de licence : {value_label(subject.licence_specialty)}")
         if subject.target:

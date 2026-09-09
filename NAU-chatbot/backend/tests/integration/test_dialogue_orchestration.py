@@ -50,6 +50,14 @@ class UnusedRecommendation:
         raise AssertionError("a factual fees request must not trigger recommendation")
 
 
+class NoRecommendation:
+    async def recommend(self, subject):
+        del subject
+        from app.domain.recommendation.schemas import RecommendationDecision
+
+        return RecommendationDecision(None, None)
+
+
 def _orchestrator(repository_factory):
     prepa = SimpleNamespace(
         id=10,
@@ -57,6 +65,8 @@ def _orchestrator(repository_factory):
         code="PREPA_GENERAL",
         nom="Cycle Préparatoire",
         description="Prépa MP",
+        duree_annees=2,
+        intitule_diplome=None,
         actif=True,
     )
     catalogue = SimpleNamespace(
@@ -123,4 +133,67 @@ async def test_current_formation_fees_are_scoped_to_the_named_formation(
 
     assert "Cycle Préparatoire" in result.answer
     assert "556 TND" in result.answer
+    assert rag.plans == []
+
+
+async def test_multiple_factual_questions_are_answered_in_one_turn(
+    repository_factory,
+) -> None:
+    orchestrator, rag = _orchestrator(repository_factory)
+
+    result = await orchestrator.process(
+        "quelles formations propose l'IIT, b9adeh et winek ?",
+        ConversationState.new(uuid4()),
+    )
+
+    assert "formations IIT" in result.answer
+    assert "Tarifs publics" in result.answer
+    assert "Technopole El Ons" in result.answer
+    assert rag.plans == []
+
+
+async def test_location_question_cannot_fall_through_to_unknown_formation(
+    repository_factory,
+) -> None:
+    orchestrator, rag = _orchestrator(repository_factory)
+
+    result = await orchestrator.process(
+        "où est l'IIT à Hay El Ons et Mharza ?",
+        ConversationState.new(uuid4()),
+    )
+
+    assert "Technopole El Ons" in result.answer
+    assert "Route Mharza" in result.answer
+    assert "L'IIT n'a pas de centre" not in result.answer
+    assert rag.plans == []
+
+
+async def test_evening_question_does_not_enter_programme_llm_path(
+    repository_factory,
+) -> None:
+    orchestrator, rag = _orchestrator(repository_factory)
+
+    result = await orchestrator.process(
+        "najjem na9ra bel lil ?",
+        ConversationState.new(uuid4()),
+    )
+
+    assert "cours du soir" in result.answer
+    assert "administration" in result.answer
+    assert rag.plans == []
+
+
+@pytest.mark.parametrize("message", ["j'ai une licence en droit", "j'ai un bac lettres"])
+async def test_external_profile_without_active_rule_contacts_administration(
+    repository_factory,
+    message,
+) -> None:
+    orchestrator, rag = _orchestrator(repository_factory)
+    orchestrator.recommendation_service = NoRecommendation()
+
+    result = await orchestrator.process(message, ConversationState.new(uuid4()))
+
+    assert "aucune orientation IIT confirmée" in result.answer
+    assert "administration IIT" in result.answer
+    assert "Licence en Informatique" not in result.answer
     assert rag.plans == []

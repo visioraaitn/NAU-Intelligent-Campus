@@ -24,6 +24,8 @@ class QualificationPolicy:
             return "BAC_SPECIALTY"
         if subject.profile in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER} and not subject.licence_specialty:
             return "LICENCE_SPECIALTY"
+        if subject.profile in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER} and subject.licence_specialty:
+            return None
         if subject.profile is not AcademicProfile.NEW_BAC and not subject.interests:
             return "INTEREST"
         return None

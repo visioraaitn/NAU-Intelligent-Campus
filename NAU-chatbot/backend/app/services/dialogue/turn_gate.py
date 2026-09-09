@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import re
+from difflib import SequenceMatcher
 from enum import Enum
 
 from app.core.file_config import pattern_file, security_file_config
@@ -17,6 +18,7 @@ class TurnType(str, Enum):
     THANKS = "THANKS"
     GOODBYE = "GOODBYE"
     SMALL_TALK = "SMALL_TALK"
+    OUT_OF_SCOPE = "OUT_OF_SCOPE"
     ACADEMIC = "ACADEMIC"
 
 
@@ -29,11 +31,29 @@ FIXED_RESPONSES = {
     TurnType.THANKS: "Avec plaisir 🙂 N'hésite pas si tu veux approfondir une formation.",
     TurnType.GOODBYE: "À bientôt 🙂 Bon courage pour ton orientation !",
     TurnType.SMALL_TALK: "Salut 🙂 Je suis là pour t'aider à explorer les formations et ton orientation à l'IIT.",
+    TurnType.OUT_OF_SCOPE: "Je peux aider uniquement pour les formations, l'orientation, l'admission, les modules, les frais et les informations officielles de l'IIT.",
     TurnType.RESET: "D'accord, on repart de zéro. Qu'est-ce que tu aimerais savoir ?",
 }
 
 
 class TurnGate:
+    # These cues are deliberately narrower than intent detection.  They are used
+    # to override a fallible model domain decision, so generic words such as
+    # "programme", "travail", "avenir" or "combien" must not be included.
+    STRONG_ACADEMIC_SIGNAL = re.compile(
+        r"\b(?:iit|bac(?:calaureat)?|licen[cs]e|mastere?|prepa|preparatoire|"
+        r"formations?|specialites?|filieres?|parcours|genie|ingenieur|architecture|"
+        r"matieres?|modules?|diplome|admission|admissible|pre[ -]?inscri\w*|"
+        r"mensualite|tarif|b?9add?e(?:h|ch)|accredit\w*|certification|campus|"
+        r"mo3taraf|mo3taref|ma3tref|ma3rouf|معترف|"
+        r"cours?\s+(?:du|de)?\s*soir[e]?|"
+        r"(?:na9ra|n9ra|nakra|nkra)\s+(?:b|bel|fi|fel)\s*(?:el\s*)?lil|"
+        r"nej+em\s+na9ra|nej+em\s+n9ra|nheb\s+na9ra|nheb\s+n9ra|nheb\s+nkra|"
+        r"informatique|cyber(?:securite)?|mecatronique|electrique|industriel|"
+        r"science\s+des\s+donnees|intelligence\s+artificielle)\b",
+        re.I,
+    )
+
     def __init__(self) -> None:
         greeting = pattern_file("greetings").patterns
         self.patterns = {
@@ -75,6 +95,11 @@ class TurnGate:
             return TurnType.SECURITY
         if any(pattern.search(folded) for pattern in self.insults):
             return TurnType.INAPPROPRIATE
+        if self._has_intent("OUT_OF_SCOPE", folded):
+            return TurnType.OUT_OF_SCOPE
+        fuzzy_social = self._fuzzy_social_type(folded)
+        if fuzzy_social is not None:
+            return fuzzy_social
         for name, kind in (
             ("greeting", TurnType.GREETING),
             ("how_are_you", TurnType.HOW_ARE_YOU),
@@ -83,6 +108,8 @@ class TurnGate:
         ):
             if self._matches(name, folded):
                 return kind
+        if self._has_academic_intent(folded):
+            return TurnType.ACADEMIC
         if any(pattern.search(folded) for pattern in self.smalltalk):
             return TurnType.SMALL_TALK
         if any(contains_phrase(folded, term) for term in self.contextual_terms):
@@ -91,6 +118,52 @@ class TurnGate:
         if len(words) <= 2 and words and not words.intersection(self.hints):
             return TurnType.SMALL_TALK
         return TurnType.ACADEMIC
+
+    def _has_academic_intent(self, value: str) -> bool:
+        patterns = pattern_file("intents").patterns
+        academic_intents = {
+            name for name in patterns
+            if name not in {"GENERAL", "OUT_OF_SCOPE"}
+        }
+        return any(
+            re.search(pattern, value, re.IGNORECASE)
+            for name in academic_intents
+            for pattern in patterns[name]
+        )
+
+    @staticmethod
+    def _has_intent(name: str, value: str) -> bool:
+        return any(
+            re.search(pattern, value, re.IGNORECASE)
+            for pattern in pattern_file("intents").patterns.get(name, [])
+        )
+
+    def has_strong_academic_signal(self, value: str) -> bool:
+        """Return whether the message itself clearly concerns IIT/academics.
+
+        This is intentionally independent from conversation memory: a previous
+        academic profile must never turn a new weather, sport or political
+        question into an academic request.
+        """
+
+        return bool(self.STRONG_ACADEMIC_SIGNAL.search(fold_text(value)))
+
+    def _fuzzy_social_type(self, value: str) -> TurnType | None:
+        if len(value) > 32 or not value.isascii():
+            return None
+        candidates = {
+            TurnType.HOW_ARE_YOU: ("cv", "ca va", "labes", "chhalek"),
+            TurnType.GREETING: ("salam", "salut", "ahla", "bonjour"),
+        }
+        if re.fullmatch(r"w(?:i|e)n(?:e?k|ik)?\s+cv", value):
+            return TurnType.HOW_ARE_YOU
+        for kind, words in candidates.items():
+            if any(
+                SequenceMatcher(None, value, word).ratio() >= 0.8
+                for word in words
+            ):
+                return kind
+        return None
 
     def _matches(self, name: str, value: str) -> bool:
         return any(pattern.search(value) for pattern in self.patterns.get(name, []))
@@ -103,6 +176,4 @@ class TurnGate:
                 TurnType.HOW_ARE_YOU: "Ça va bien, merci 🙂 Que veux-tu approfondir sur l'IIT ?",
                 TurnType.SMALL_TALK: "Je suis là pour continuer ton orientation à l'IIT.",
             }.get(turn_type, answer)
-        if first_reply and not fold_text(answer).startswith("salut"):
-            return f"Salut 🙂 {answer}"
         return answer

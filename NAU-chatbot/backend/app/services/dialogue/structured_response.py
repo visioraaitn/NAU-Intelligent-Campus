@@ -17,6 +17,20 @@ from app.services.dialogue.human_labels import value_label
 from app.services.dialogue.normalizer import contains_phrase, fold_text
 
 
+FORMATION_LINKS = {
+    "PREPA_GENERAL": "https://iit.tn/prepa/",
+    "LICENCE_INFO": "https://iit.tn/licences/",
+    "LICENCE_MECATRONIQUE_SI": "https://iit.tn/licences/",
+    "LICENCE_ELEC_SEIER": "https://iit.tn/licences/",
+    "INGENIEUR_INFO": "https://iit.tn/filieres-ingenieur/genie-informatique-2/",
+    "INGENIEUR_CIVIL": "https://iit.tn/filieres-ingenieur/genie-civil/",
+    "INGENIEUR_INDUSTRIEL": "https://iit.tn/filieres-ingenieur/genie-industriel-2/",
+    "INGENIEUR_MECANIQUE": "https://iit.tn/filieres-ingenieur/genie-mecanique-2/",
+    "INGENIEUR_PROCEDES": "https://iit.tn/genie-des-procedes/",
+    "ARCHITECTURE_DNA": "https://iit.tn/architecture-2/",
+}
+
+
 class StructuredResponseBuilder:
     def __init__(self, catalogue: AcademicCatalogService) -> None:
         self.catalogue = catalogue
@@ -71,16 +85,131 @@ class StructuredResponseBuilder:
                 lines.append(
                     "  Spécialisations : " + ", ".join(item.nom for item in specs)
                 )
+            lines.append(f"  Page officielle : {FORMATION_LINKS.get(formation.code, 'https://iit.tn/formation/')}")
         lines.append(
             "Dis-moi ton niveau actuel et ta section ou spécialité, et je te montrerai uniquement les formations compatibles avec ton profil."
         )
         return "\n".join(lines)
+
+    async def accreditation(
+        self,
+        target: AcademicTarget | None,
+        message: str,
+    ) -> str:
+        formations = [target.formation] if target else (
+            await self.catalogue.formations.list(PageRequest(page_size=100))
+        ).items
+        requested_iso = "iso" in fold_text(message)
+        lines: list[str] = []
+        for formation in (formations if not requested_iso or target else ()):
+            records = (
+                await self.catalogue.accreditations.list(
+                    PageRequest(page_size=100, filters={"formation_id": formation.id})
+                )
+            ).items
+            if records:
+                for record in records:
+                    organism = f" par {record.organisme}" if record.organisme else ""
+                    source_ref = getattr(record, "source_ref", None)
+                    verification = (
+                        ""
+                        if source_ref
+                        else " Source officielle non renseignée dans la base."
+                    )
+                    lines.append(
+                        f"• {formation.nom} : enregistrement {record.nom}{organism}.{verification}"
+                    )
+            elif target:
+                lines.append(
+                    f"• Aucune accréditation n'est renseignée pour {formation.nom} dans la base académique active."
+                )
+        global_certifications = (
+            await self.catalogue.elements.list(
+                PageRequest(page_size=100, filters={"formation_id": None})
+            )
+        ).items
+        for item in global_certifications:
+            if item.type_element.value == "CERTIFICATION" and "21001" in item.nom:
+                lines.append(
+                    f"• Certification institutionnelle déclarée : {item.nom}. La preuve officielle doit être confirmée par l'IIT."
+                )
+        iso_recorded = any("21001" in item.nom for item in global_certifications)
+        if requested_iso and not iso_recorded:
+            lines.append(
+                "ISO 21001 n'est pas documentée dans la base académique active; je ne peux donc pas affirmer que l'IIT possède cette certification. Consulte la page officielle des accréditations : https://iit.tn/a-propos/accreditations/"
+            )
+        elif requested_iso:
+            lines.append(
+                "ISO 21001 est enregistrée comme déclaration à confirmer; je ne peux pas la présenter comme certification officielle sans preuve IIT vérifiable. Consulte la page officielle des accréditations : https://iit.tn/a-propos/accreditations/"
+            )
+        if not lines:
+            lines.append(
+                "Aucune accréditation précise n'est renseignée pour cette portée dans la base académique active. Consulte la page officielle : https://iit.tn/a-propos/accreditations/"
+            )
+        lines.append(
+            "Une accréditation concerne un programme, pas automatiquement chaque étudiant. La reconnaissance ou l'équivalence dans un pays donné doit être vérifiée auprès de l'établissement ou de l'autorité compétente."
+        )
+        return "\n".join(lines)
+
+    async def institutional_advantages(self) -> str:
+        formations = (await self.catalogue.formations.list(PageRequest(page_size=100))).items
+        formation_names = ", ".join(item.nom for item in formations[:12])
+        accreditations = (await self.catalogue.accreditations.list(PageRequest(page_size=100))).items
+        accreditation_names = ", ".join(
+            dict.fromkeys(
+                f"{item.nom} ({item.organisme})" if getattr(item, "organisme", None) else item.nom
+                for item in accreditations
+            )
+        )
+        global_elements = (
+            await self.catalogue.elements.list(
+                PageRequest(page_size=100, filters={"formation_id": None})
+            )
+        ).items
+        iso = next(
+            (item.nom for item in global_elements if "21001" in item.nom),
+            None,
+        )
+        iso_line = (
+            f"• certification institutionnelle déclarée : {iso}, à confirmer par une preuve officielle;\n"
+            if iso
+            else "• aucune certification ISO 21001 vérifiée n'est actuellement enregistrée dans la base active;\n"
+        )
+        return (
+            "Pour découvrir l'IIT, voici les éléments actuellement enregistrés dans la base académique :\n"
+            f"• formations proposées : {formation_names or 'catalogue à consulter sur le site officiel'};\n"
+            "• pédagogie orientée vers les projets appliqués, la communication et le travail en équipe;\n"
+            "• ouverture internationale, notamment mobilité, échanges et partenariats lorsqu'ils sont documentés;\n"
+            + iso_line
+            + f"• accréditations de programmes enregistrées : {accreditation_names or 'aucune dans la base active'};\n"
+            + "Les accréditations concernent des programmes précis : consulte la fiche de la formation pour voir son label et son organisme.\n"
+            "Ces éléments ne garantissent ni l'admission, ni un emploi, ni une équivalence automatique. Pour vérifier les formations et les informations à jour : https://iit.tn/formation/"
+        )
+
+    async def location(self) -> str:
+        return (
+            "L'IIT indique deux implantations à Sfax :\n"
+            "• Route de Tunis km 10, Technopole El Ons, Sfax;\n"
+            "• Route Mharza km 1,5, Sfax.\n"
+            "La possibilité d'étudier dans l'un ou l'autre site dépend de la formation et de l'organisation de l'année. "
+            "Pour confirmer le campus, les horaires et les cours du soir, contacte l'administration : (+216) 70 28 26 00 ou info@iit.tn.\n"
+            "Source officielle : https://iit.tn/contact-3/"
+        )
+
+    async def schedule(self) -> str:
+        return (
+            "Les horaires des cours du soir ne sont pas suffisamment documentés dans la base académique active. "
+            "Ils peuvent dépendre de la formation et de l'année universitaire. "
+            "Pour confirmer la disponibilité des cours du soir, le campus et les horaires, contacte directement l'administration IIT : "
+            "(+216) 70 28 26 00 ou info@iit.tn."
+        )
 
     async def fees(
         self,
         target: AcademicTarget | None,
         *,
         include_all: bool = False,
+        licence_only: bool = False,
     ) -> str:
         if target is not None:
             formations = [target.formation]
@@ -97,6 +226,10 @@ class StructuredResponseBuilder:
                 formations,
                 key=lambda item: (item.parcours_id, item.id),
             )
+            if licence_only:
+                formations = [
+                    item for item in formations if item.code.startswith("LICENCE_")
+                ]
 
         entries: list[tuple[object, object]] = []
         seen_entries: set[tuple[object, ...]] = set()
@@ -364,6 +497,29 @@ class StructuredResponseBuilder:
         return "Tu ne m'as pas encore indiqué clairement ton niveau d'études actuel."
 
     @staticmethod
+    def no_confirmed_orientation(subject: SubjectState) -> str:
+        if subject.profile is AcademicProfile.NEW_BAC and subject.bac_specialty:
+            profile = f"un bac {value_label(subject.bac_specialty)}"
+        elif subject.licence_specialty:
+            profile = f"une licence en {subject.licence_specialty.replace('_', ' ').title()}"
+        else:
+            profile = "ce profil"
+        return (
+            f"Je ne trouve aucune orientation IIT confirmée dans les règles actives pour {profile}. "
+            "Je préfère ne pas inventer une équivalence ou une formation. "
+            "Pour vérifier ton admissibilité et les possibilités particulières, contacte l'administration IIT : "
+            "(+216) 70 28 26 00 ou info@iit.tn."
+        )
+
+    @staticmethod
+    def missing_formation_for_details() -> str:
+        return (
+            "Je peux vérifier les matières, le programme, la durée, les débouchés, les certifications ou les conditions d'admission, "
+            "mais il me faut d'abord le nom de la formation ou de la spécialisation. "
+            "Donne-moi par exemple « licence informatique », « génie info » ou « génie industriel »."
+        )
+
+    @staticmethod
     def _distinct_alternatives(
         decision: RecommendationDecision,
     ) -> tuple[RecommendationOption, ...]:
@@ -371,7 +527,9 @@ class StructuredResponseBuilder:
             (decision.secondary,) if decision.secondary is not None else ()
         )
         unique: list[RecommendationOption] = []
-        seen: set[int] = set()
+        seen: set[int] = (
+            {decision.primary.formation_id} if decision.primary is not None else set()
+        )
         for option in options:
             if option.formation_id in seen:
                 continue
@@ -507,6 +665,7 @@ class StructuredResponseBuilder:
         ]
         title = target.specialisation.nom if target.specialisation else formation.nom
         lines = [title]
+        lines.append(f"Page officielle : {FORMATION_LINKS.get(formation.code, 'https://iit.tn/formation/')}")
 
         if formation.intitule_diplome and formation.code != "PREPA_GENERAL":
             lines.append(f"Diplôme préparé : {formation.intitule_diplome}.")
@@ -592,7 +751,7 @@ class StructuredResponseBuilder:
                     "COMPETENCE",
                 }
             ]
-            if contents and (target.specialisation is not None or not specs):
+            if contents:
                 displayed_contents = contents if include_all else contents[:8]
                 lines.append("Contenus et compétences : " + ", ".join(displayed_contents) + ".")
 

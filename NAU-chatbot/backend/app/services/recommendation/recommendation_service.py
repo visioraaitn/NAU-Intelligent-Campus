@@ -246,6 +246,8 @@ class RecommendationService:
         }:
             return True
         specialty = fold_text(subject.licence_specialty or "")
+        if not specialty:
+            return True
         if any(term in specialty for term in ("info", "logiciel", "reseau", "data", "cyber")):
             return formation_code == "INGENIEUR_INFO"
         if any(term in specialty for term in ("civil", "batiment", "construction")):
@@ -254,4 +256,4 @@ class RecommendationService:
             return formation_code in {"INGENIEUR_MECANIQUE", "INGENIEUR_INDUSTRIEL"}
         if any(term in specialty for term in ("chim", "procede", "energie")):
             return formation_code == "INGENIEUR_PROCEDES"
-        return True
+        return False

@@ -263,6 +263,9 @@ accreditations:
     actif: true
 
 formation_elements:
+  - {formation_code: null, type_element: INFORMATION, code: IIT_QUALITY_POLICY, nom: "Politique qualité et amélioration continue", description: "L'IIT publie une politique qualité centrée sur les besoins des apprenants, l'amélioration continue, les projets appliqués et le développement des compétences.", source_ref: SRC_IIT_QUALITY, actif: true}
+  - {formation_code: null, type_element: INFORMATION, code: IIT_INTERNATIONAL_OPENING, nom: "Ouverture internationale", description: "Le site institutionnel IIT présente des possibilités de mobilité, d'échanges, de parcours bi-diplômants et de partenariats internationaux.", source_ref: SRC_IIT_MAIN, actif: true}
+  - {formation_code: null, type_element: INFORMATION, code: IIT_MISSIONS_PARTNERSHIPS, nom: "Missions et partenariats", description: "Les missions publiques de l'IIT mentionnent l'innovation, les projets étudiants et la coopération avec des universités et partenaires nationaux et internationaux.", source_ref: SRC_IIT_MISSIONS, actif: true}
   # Génie des Procédés — compétences, métiers et domaines du flyer.
   - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_SIM, nom: "Simulation de procédés (Aspen HYSYS, CFD, REVIT…)", source_ref: FLYER_GENIE_PROCEDES, actif: true}
   - {formation_code: INGENIEUR_PROCEDES, type_element: COMPETENCE, code: PROC_TRANSFERT, nom: "Phénomènes de transfert et opérations unitaires", source_ref: FLYER_GENIE_PROCEDES, actif: true}

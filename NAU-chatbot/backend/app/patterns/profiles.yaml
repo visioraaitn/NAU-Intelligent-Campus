@@ -20,11 +20,17 @@ patterns:
     - '\b(j''ai|j ai|andi|3andi)\s+(?:une?\s+)?(licence|licenci[eé])\b'
     - '\b(titulaire|dipl[oô]m[eé]).*(licence|licenci[eé])\b'
     - '\b(i have|i hold).*(licence|license|bachelor)\b'
+    - '\b(?:j''ai|j ai|ena)\s+(?:d[eé]j[aà]\s+)?(?:r[eé]ussi|valid[eé]|obtenu|termin[eé])\w*.*\b(?:ma\s+)?licence\b'
+    - '\b(?:r[eé]ussi|valid[eé]|obtenu|termin[eé]|njaht|naj7t)\w*\s+(?:ma\s+)?(?:licence|licenci[eé])\b'
+    - '\b(?:njaht|naj7t)\s+(?:fi|fel)\s+(?:el\s+)?(?:licence|licenci[eé])\b'
   licence_student:
     - '\b(en licence|na9ra licence|étudiant en licence|etudiant en licence)\b'
     - '\b(ena|je suis)\s+(?:en\s+)?licence\b'
   prepa_holder:
     - '\b(j''ai fini|j ai fini|dipl[oô]m[eé]|termin[eé]).*(pr[eé]pa|preparatoire)\b'
+    - '\b(?:j''ai|j ai|ena)\s+(?:d[eé]j[aà]\s+)?(?:fini|termin[eé]|valid[eé]|r[eé]ussi|kammelt|kamalt)\w*.*\b(?:la\s+)?(?:pr[eé]pa|prepa|preparatoire)\b'
+    - '\b(?:kammelt|kamalt|valid[eé]|r[eé]ussi|fini|termin[eé])\w*\s+(?:el\s+)?(?:pr[eé]pa|prepa|preparatoire)\b'
+    - '\b(?:pr[eé]pa|prepa|preparatoire)\s+(?:d[eé]j[aà]\s+)?(?:valid[eé]e?|r[eé]ussi[eé]?|termin[eé]e?|finie)\b'
   prepa_student:
     - '\b(en pr[eé]pa|na9ra prepa|étudiant en prépa|etudiant en prepa)\b'
   average:
@@ -40,6 +46,8 @@ patterns:
     - '\bpr[eé][ -]?inscri\w*\s+(?:est\s+)?(?:deja\s+)?faite?\b'
   correction:
     - '\b(en fait|correction|je me suis trompe|je me suis trompé|non je suis)\b'
+  bac_denial:
+    - '\b(?:je\s+ne\s+suis\s+pas|je\s+n''ai\s+pas|manich|mouch)\s+(?:un\s+)?bac\b'
   pending_bac_level:
     - '^\s*(?P<average>\d{1,2}(?:[.,]\d+)?)\s*(?:w|et|,)\s*(?P<math>\d{1,2}(?:[.,]\d+)?)\s*$'
 terms:

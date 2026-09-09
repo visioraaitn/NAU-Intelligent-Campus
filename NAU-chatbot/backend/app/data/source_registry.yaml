@@ -46,6 +46,16 @@ sources:
     type: WEB_PAGE
     url: https://iit.tn/a-propos/accreditations/
     description: Page publique des accréditations officielles IIT.
+  SRC_IIT_QUALITY:
+    title: Politique qualité IIT
+    type: WEB_PAGE
+    url: https://iit.tn/a-propos/politique-qualite/
+    description: Politique qualité et engagement d'amélioration continue de l'IIT.
+  SRC_IIT_MISSIONS:
+    title: Missions et visions IIT
+    type: WEB_PAGE
+    url: https://iit.tn/a-propos/missions-visions/
+    description: Missions, innovation, partenariats et ouverture internationale annoncés par l'IIT.
   FLYER_GENIE_INFO:
     title: Flyer Génie Informatique
     type: FLYER

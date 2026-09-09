@@ -14,6 +14,12 @@ class ProfileResolver:
     ) -> None:
         state.active_subject = facts.subject
         subject = state.active_state
+        if facts.denies_bac and subject.profile is AcademicProfile.NEW_BAC:
+            subject.profile = AcademicProfile.UNKNOWN
+            subject.bac_specialty = None
+            subject.bac_average = None
+            subject.math_grade = None
+            subject.math_comfort = None
         if facts.profile is not None and (
             facts.correction or facts.profile.rank >= subject.profile.rank
         ):

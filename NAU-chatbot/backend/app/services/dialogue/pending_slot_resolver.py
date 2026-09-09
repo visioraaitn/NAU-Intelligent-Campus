@@ -16,7 +16,7 @@ class PendingSlotResult:
 
 
 class PendingSlotResolver:
-    AFFIRMATIVE_PATTERN = re.compile(r"^(?:oui+|yes|ey+|eey+|behi|d'accord|ok+)$", re.I)
+    AFFIRMATIVE_PATTERN = re.compile(r"^(?:oui+|yes|ey+|eey+|be+hi|d'accord|ok+)$", re.I)
 
     def __init__(self) -> None:
         self.pair_patterns = [

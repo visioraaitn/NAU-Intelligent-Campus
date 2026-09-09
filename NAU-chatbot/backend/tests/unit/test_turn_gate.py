@@ -23,6 +23,8 @@ pytestmark = pytest.mark.unit
     [
         ("salam", TurnType.GREETING),
         ("cv ?", TurnType.HOW_ARE_YOU),
+        ("winek cv", TurnType.HOW_ARE_YOU),
+        ("cvn", TurnType.HOW_ARE_YOU),
         ("3aychik", TurnType.THANKS),
         ("bislema", TurnType.GOODBYE),
         ("waaaw", TurnType.SMALL_TALK),
@@ -31,6 +33,8 @@ pytestmark = pytest.mark.unit
         ("Behi chtansahni", TurnType.ACADEMIC),
         ("w sehla ?", TurnType.ACADEMIC),
         ("اقتصاد", TurnType.ACADEMIC),
+        ("famma mekla ?", TurnType.OUT_OF_SCOPE),
+        ("beh el real wa9teh tkawar ?", TurnType.OUT_OF_SCOPE),
     ],
 )
 def test_turn_gate_routes_social_and_academic_messages(
@@ -66,6 +70,27 @@ def test_follow_up_social_response_does_not_greet_again() -> None:
     assert "Salut" not in gate.response(TurnType.HOW_ARE_YOU, first_reply=False)
 
 
+@pytest.mark.parametrize(
+    "message",
+    [
+        "slm nejjem na9ra bel lil ?",
+        "salut quelles sont les matières de la licence informatique ?",
+        "bonjour, b9adeh licence info ?",
+    ],
+)
+def test_greeting_plus_academic_question_is_not_reduced_to_a_greeting(message: str) -> None:
+    assert TurnGate().classify(message) is TurnType.ACADEMIC
+
+
+def test_domain_override_uses_only_strong_academic_cues() -> None:
+    gate = TurnGate()
+
+    assert gate.has_strong_academic_signal("slm nejjem na9ra bel lil ?") is True
+    assert gate.has_strong_academic_signal("quelles sont les spécialités ?") is True
+    assert gate.has_strong_academic_signal("écris un programme Python") is False
+    assert gate.has_strong_academic_signal("combien font deux plus deux ?") is False
+
+
 def test_tunisian_advice_request_is_detected_as_orientation() -> None:
     intents = IntentDetector().detect(
         "Behi chtansahni aad",
@@ -76,6 +101,180 @@ def test_tunisian_advice_request_is_detected_as_orientation() -> None:
     )
 
     assert intents == ["ORIENTATION"]
+
+
+def test_tunisian_recognition_request_is_detected_as_accreditation() -> None:
+    intents = IntentDetector().detect(
+        "el diplome mo3taraf bih ?",
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["ACCREDITATION"]
+
+
+def test_dialect_recognition_and_institutional_sales_requests_are_academic() -> None:
+    gate = TurnGate()
+
+    assert gate.classify("mo3taref biha") is TurnType.ACADEMIC
+    assert gate.classify("pourquoi choisir l IIT") is TurnType.ACADEMIC
+
+
+def test_institutional_sales_intent_takes_priority_over_choose_orientation() -> None:
+    intents = IntentDetector().detect(
+        "pourquoi choisir l IIT",
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.REQUEST_RECOMMENDATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["PERSUASION"]
+
+
+@pytest.mark.parametrize("message", ["ISO 21001", "EUR-ACE", "ASIIN"])
+def test_short_academic_terms_are_not_classified_as_small_talk(message: str) -> None:
+    assert TurnGate().classify(message) is TurnType.ACADEMIC
+
+
+def test_short_price_request_is_detected_as_fees() -> None:
+    intents = IntentDetector().detect(
+        "b9adeh",
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["FEES"]
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["cours du soir", "na9ra bel lil", "emploi du temps"],
+)
+def test_evening_course_questions_are_academic(message: str) -> None:
+    assert TurnGate().classify(message) is TurnType.ACADEMIC
+
+
+def test_dialect_detail_request_is_detected_as_details() -> None:
+    intents = IntentDetector().detect(
+        "fasserli akther",
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["DETAILS"]
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["quelles sont les spécialités ?", "chnouma les options", "liste des filières"],
+)
+def test_contextual_specialisation_question_is_detected_as_details(message: str) -> None:
+    intents = IntentDetector().detect(
+        message,
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["DETAILS"]
+
+
+def test_generic_how_many_question_is_not_mistaken_for_fees() -> None:
+    intents = IntentDetector().detect(
+        "combien font deux plus deux ?",
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["GENERAL"]
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["nice beeh atini kifeh naml preinscrit", "j'ai fait la préinscription"],
+)
+def test_pre_registration_word_variants_are_detected(message: str) -> None:
+    intents = IntentDetector().detect(
+        message,
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert "PREINSCRIPTION" in intents
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["chnouma les matiere elli najem narahom", "chna9ra fi hal option"],
+)
+def test_tunisian_material_questions_are_programme_requests(message: str) -> None:
+    intents = IntentDetector().detect(
+        message,
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert "PROGRAMME" in intents
+
+
+@pytest.mark.parametrize("message", ["real wa9teh tkawar", "real madrid", "wa9teh tkawar"])
+def test_unrelated_sports_questions_are_out_of_scope(message: str) -> None:
+    intents = IntentDetector().detect(
+        message,
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["OUT_OF_SCOPE"]
+
+
+@pytest.mark.parametrize("message", ["chnou ta9s taw", "chnowa el jaw", "ta9s lyoum"])
+def test_generic_tunisian_weather_questions_are_out_of_scope(message: str) -> None:
+    intents = IntentDetector().detect(
+        message,
+        previous=("ORIENTATION",),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["OUT_OF_SCOPE"]
+
+
+@pytest.mark.parametrize(
+    "message",
+    ["genie info", "genie indus", "licence genie logiciel"],
+)
+def test_common_formation_abbreviations_are_academic(message: str) -> None:
+    assert TurnGate().classify(message) is TurnType.ACADEMIC
+
+
+def test_weather_question_is_out_of_scope() -> None:
+    intents = IntentDetector().detect(
+        "quelle est la météo demain ?",
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert intents == ["OUT_OF_SCOPE"]
 
 
 def test_plural_careers_request_is_detected() -> None:
@@ -270,6 +469,34 @@ async def test_short_cyber_choice_resolves_to_specialisation(repository_factory)
 
 
 @pytest.mark.asyncio
+async def test_misspelled_software_choice_resolves_conservatively(repository_factory) -> None:
+    formation = SimpleNamespace(
+        id=1,
+        code="LICENCE_INFO",
+        nom="Licence en Informatique",
+    )
+    specialisation = SimpleNamespace(
+        id=10,
+        formation_id=1,
+        code="LIC_INFO_GLSI",
+        nom="Génie Logiciel & Systèmes Intelligents",
+    )
+
+    class Catalogue:
+        formations = repository_factory([formation])
+        specialisations = repository_factory([specialisation])
+
+        async def get_formation(self, formation_id: int):
+            return await self.formations.require(formation_id)
+
+    target = await AcademicTargetResolver(Catalogue()).resolve("genie logicielleeee")
+
+    assert target is not None
+    assert target.formation.code == "LICENCE_INFO"
+    assert target.specialisation is specialisation
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("message", "expected_label"),
     [
@@ -296,6 +523,21 @@ async def test_unknown_academic_offer_is_distinguished_from_no_target(
 
 
 @pytest.mark.asyncio
+async def test_active_formation_reference_is_not_an_unknown_offer(repository_factory) -> None:
+    formation = SimpleNamespace(id=1, code="LICENCE_INFO", nom="Licence en Informatique")
+    catalogue = SimpleNamespace(
+        specialisations=repository_factory(),
+        formations=repository_factory([formation]),
+    )
+
+    assert AcademicTargetResolver.is_current_reference("hedhi licence accreditee") is True
+    resolution = await AcademicTargetResolver(catalogue).resolve_request("licence hedhi")
+
+    assert resolution.target is None
+    assert resolution.unavailable_label == "licence hedhi"
+
+
+@pytest.mark.asyncio
 async def test_owned_licence_is_not_reported_as_an_unavailable_iit_offer(
     repository_factory,
 ) -> None:
@@ -308,7 +550,47 @@ async def test_owned_licence_is_not_reported_as_an_unavailable_iit_offer(
         "j ai une licence industrielle"
     )
 
+    assert resolution.target is None
     assert resolution.unavailable_label is None
+
+
+@pytest.mark.asyncio
+async def test_owned_licence_does_not_become_the_requested_iit_target(
+    repository_factory,
+) -> None:
+    licence = SimpleNamespace(
+        id=1,
+        code="LICENCE_INFO",
+        nom="Licence en Informatique",
+    )
+    engineering = SimpleNamespace(
+        id=2,
+        code="INGENIEUR_INFO",
+        nom="Génie Informatique",
+    )
+    catalogue = SimpleNamespace(
+        specialisations=repository_factory(),
+        formations=repository_factory([licence, engineering]),
+    )
+
+    profile_only = await AcademicTargetResolver(catalogue).resolve_request(
+        "j'ai une licence en informatique"
+    )
+    explicit_target = await AcademicTargetResolver(catalogue).resolve_request(
+        "j'ai une licence en informatique et je veux génie info"
+    )
+
+    assert profile_only.target is None
+    assert explicit_target.target is not None
+    assert explicit_target.target.formation.code == "INGENIEUR_INFO"
+
+
+def test_first_non_social_question_is_not_prefixed_with_a_greeting() -> None:
+    gate = TurnGate()
+
+    answer = gate.response(TurnType.OUT_OF_SCOPE, first_reply=True)
+
+    assert not answer.startswith("Salut")
 
 
 @pytest.mark.parametrize("message", ["zebi", "nik ommok", "ya ta7an"])

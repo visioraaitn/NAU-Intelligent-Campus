@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.core.file_config import dialogue_config, pattern_file
 from app.domain.conversation.models import AcademicProfile, ConversationSubject
@@ -23,6 +23,7 @@ class RawFacts:
     finishing_current_degree: bool = False
     pre_registration_completed: bool = False
     correction: bool = False
+    denies_bac: bool = False
     scope: ContextScope = ContextScope.CURRENT
 
 
@@ -46,11 +47,18 @@ class RawFactExtractor:
     ) -> RawFacts:
         text = fold_text(message)
         subject = self._subject(text, active_subject)
-        profile = self._profile(text, negation.has_negation)
+        profile = self._profile(text)
         bac = self._bac(text)
         average = self._number("average", text)
         math_grade = self._number("math_grade", text)
         licence_specialty = self._capture("licence_specialty", text)
+        if (
+            licence_specialty
+            and self._matches("licence_holder", text)
+            and re.search(r"\b(?:r[eé]ussi|valid[eé]|obtenu|termin[eé]|njaht|naj7t)\w*\b", text)
+            and not re.search(r"\blicence\s+en\s+", text)
+        ):
+            licence_specialty = None
         interests: list[str] = []
         for interest, terms in self.interest_terms.items():
             if any(contains_phrase(text, term) for term in terms):
@@ -69,6 +77,8 @@ class RawFactExtractor:
             target = "PREPA"
         elif has_goal and contains_phrase(text, "licence"):
             target = "LICENCE"
+        if profile is AcademicProfile.PREPA_HOLDER and has_goal:
+            target = "ENGINEERING"
         return RawFacts(
             subject=subject,
             profile=profile,
@@ -84,6 +94,7 @@ class RawFactExtractor:
                 text,
             ),
             correction=self._matches("correction", text),
+            denies_bac=self._matches("bac_denial", text),
             scope=self.context.detect(text),
         )
 
@@ -98,7 +109,7 @@ class RawFactExtractor:
             return ConversationSubject.SELF
         return current
 
-    def _profile(self, text: str, negated: bool) -> AcademicProfile | None:
+    def _profile(self, text: str) -> AcademicProfile | None:
         candidates: list[AcademicProfile] = []
         if self._matches("master", text) and any(
             contains_phrase(text, cue)
@@ -113,9 +124,7 @@ class RawFactExtractor:
             candidates.append(AcademicProfile.PREPA_HOLDER)
         elif self._matches("prepa_student", text):
             candidates.append(AcademicProfile.PREPA_STUDENT)
-        if self._matches("bac", text) and not (
-            negated and contains_phrase(text, "manich bac")
-        ):
+        if self._matches("bac", text) and not self._matches("bac_denial", text):
             candidates.append(AcademicProfile.NEW_BAC)
         return max(candidates, key=lambda item: item.rank) if candidates else None
 

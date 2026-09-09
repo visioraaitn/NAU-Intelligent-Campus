@@ -15,7 +15,7 @@ ALLOWED_INTENTS = frozenset(
         "CERTIFICATIONS", "INTERNATIONAL", "ACCREDITATION", "ADMISSION",
         "PAYMENT", "PREINSCRIPTION", "CONTACT", "ORIENTATION", "DETAILS",
         "DIFFICULTY", "PERSUASION", "PROFILE_RECALL",
-        "REGISTRATION_DOCUMENTS", "GENERAL",
+        "REGISTRATION_DOCUMENTS", "LOCATION", "SCHEDULE", "OUT_OF_SCOPE", "GENERAL",
     }
 )
 
@@ -65,4 +65,12 @@ class IntentDetector:
             direct.append("DIFFICULTY")
         if "REGISTRATION_DOCUMENTS" in direct:
             direct = [intent for intent in direct if intent != "PREINSCRIPTION"]
+        if "SCHEDULE" in direct and "PROGRAMME" in direct:
+            programme_terms = ("module", "matiere", "mawad", "programme", "contenu")
+            if not any(term in text for term in programme_terms):
+                direct = [intent for intent in direct if intent != "PROGRAMME"]
+        if "PROGRAMME" in direct and "DETAILS" in direct:
+            direct = [intent for intent in direct if intent != "DETAILS"]
+        if "PERSUASION" in direct:
+            direct = [intent for intent in direct if intent != "ORIENTATION"]
         return [intent for intent in dict.fromkeys(direct or ["GENERAL"]) if intent in ALLOWED_INTENTS]

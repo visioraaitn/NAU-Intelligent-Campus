@@ -117,6 +117,8 @@ class AcademicDocumentBuilder:
             "OUTIL": "Outil étudié",
             "OPPORTUNITE": "Perspective",
             "INFORMATION": "Information académique",
+            "LIEN_PREINSCRIPTION": "Lien de pré-inscription",
+            "DOCUMENT_INSCRIPTION": "Document d'inscription",
         }
         content = _clean(f"{labels[row.type_element.value]} : {row.nom}.", row.description, f"Organisme: {row.organisme}." if row.organisme else None)
         return self._document(document_id=f"element:{row.id}", entity_type="FORMATION_ELEMENT", entity_id=row.id, content=content, formation_id=row.formation_id, formation_code=formation.code if formation else None, specialisation_id=row.specialisation_id, specialisation_code=spec_code, element_type=row.type_element.value, source_ref=row.source_ref, active=row.actif, updated_at=row.updated_at)
