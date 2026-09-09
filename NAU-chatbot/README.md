@@ -104,6 +104,21 @@ curl --fail http://127.0.0.1:8080/healthz
 
 Migrations and seed are deliberately explicit one-shot operations; application startup never mutates the schema. Do not start the RAG worker or enqueue initial indexing until `docker compose ps inference` reports healthy. PostgreSQL remains authoritative while indexing catches up. See [VM_SETUP.md](VM_SETUP.md) for model staging and the fully ordered VM procedure.
 
+## Portable repository seed
+
+[`iit_repository_seed.sql`](iit_repository_seed.sql) is a self-contained PostgreSQL snapshot for inspecting or reproducing the repository database on another machine. It contains the complete current schema (including Alembic state, constraints, indexes and sequences) and all academic/RAG data. The authentication and conversation tables are created empty so no user identity, password hash or private conversation is committed.
+
+Restore it into an existing target database with:
+
+```bash
+psql -v ON_ERROR_STOP=1 \
+  -h "$POSTGRES_HOST" -p "${POSTGRES_PORT:-5432}" \
+  -U "$POSTGRES_USER" -d "$POSTGRES_DB" \
+  -f iit_repository_seed.sql
+```
+
+The file cleans and recreates the application objects in the target database. Redis should start empty, and Chroma must then be rebuilt from PostgreSQL with `python -m app.commands.reindex_rag`. For normal maintained deployments, Alembic plus `python -m app.commands.seed_academic` remains the recommended initialization path; `iit_academic_db.sql` is retained as the historical academic reconstruction script.
+
 ## HTTP surface
 
 - `POST /api/v1/chat/session`
@@ -126,4 +141,4 @@ FastAPI's OpenAPI UI remains reachable from the loopback-only backend port; ngin
 - Deployment, backup, upgrade, and rollback: [DEPLOYMENT.md](DEPLOYMENT.md)
 - Fresh Ubuntu/NVIDIA VM procedure: [VM_SETUP.md](VM_SETUP.md)
 
-Do not use the supplied historical SQL dump as a production bootstrap script. Alembic plus the curated, idempotent seed is the supported clean deployment path.
+Do not use `iit_academic_db.sql` as a production bootstrap script. Alembic plus the curated, idempotent seed is the supported clean deployment path; `iit_repository_seed.sql` is the sanitized portable snapshot for exact reproduction and inspection.
