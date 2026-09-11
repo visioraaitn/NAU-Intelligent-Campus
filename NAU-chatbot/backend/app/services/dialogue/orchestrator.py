@@ -16,6 +16,7 @@ from app.domain.recommendation.schemas import (
     EligibilityDecision,
     EligibilityStatus,
     RecommendationDecision,
+    RecommendationOption,
 )
 from app.services.academic.catalog_service import AcademicCatalogService
 from app.services.academic.target_resolver import (
@@ -504,7 +505,36 @@ class ChatOrchestrator:
         if credential_options:
             recommendation = RecommendationDecision(None, None)
         elif not qualification_question and ("ORIENTATION" in intents or ("PREINSCRIPTION" in intents and target is None)):
-            recommendation = await self.recommendation_service.recommend(subject)
+            if target is not None and "ORIENTATION" in intents:
+                # An explicit formation request must not be replaced by the
+                # highest-scoring sibling (for example Génie Industriel when
+                # the student explicitly asked for Génie Informatique).
+                target_eligibility = eligibility or await self.eligibility_service.evaluate(
+                    subject,
+                    target.formation,
+                    target.specialisation,
+                )
+                recommendation = RecommendationDecision(
+                    RecommendationOption(
+                        formation_id=target.formation.id,
+                        formation_code=target.formation.code,
+                        formation_name=target.formation.nom,
+                        specialisation_id=(
+                            target.specialisation.id if target.specialisation else None
+                        ),
+                        specialisation_code=(
+                            target.specialisation.code if target.specialisation else None
+                        ),
+                        specialisation_name=(
+                            target.specialisation.nom if target.specialisation else None
+                        ),
+                        score=2.0,
+                        eligibility=target_eligibility,
+                    ),
+                    None,
+                )
+            else:
+                recommendation = await self.recommendation_service.recommend(subject)
             log_stage(
                 "RECOMMENDATION",
                 session_id=session_id,

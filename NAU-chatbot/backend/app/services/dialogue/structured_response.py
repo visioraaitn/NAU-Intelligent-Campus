@@ -407,9 +407,9 @@ class StructuredResponseBuilder:
                     + "."
                 )
             lines.append(
-                "Si ton objectif est plutôt le cycle ingénieur, ta licence devra d'abord être validée. "
-                "Après validation, l'admission pourra étudier ton dossier et comparer ta spécialité avec les cycles "
-                "Génie Informatique, Génie Industriel, Génie Mécanique ou Génie des Procédés; ce n'est pas une admission automatique."
+                "Pour l'instant, je reste sur la poursuite de ta licence. "
+                "Si ton objectif est le cycle ingénieur, précise-le : ta licence devra d'abord être validée "
+                "et l'admission étudiera alors la compatibilité de ton dossier; ce n'est pas une admission automatique."
             )
         elif subject.profile is AcademicProfile.LICENCE_STUDENT:
             lines.append(

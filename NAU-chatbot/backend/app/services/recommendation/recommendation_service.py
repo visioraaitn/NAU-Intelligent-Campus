@@ -300,8 +300,12 @@ class RecommendationService:
         if near_any(("civil", "batiment", "construction")):
             return formation_code == "INGENIEUR_CIVIL"
         if near_any((
+            "industriel", "industrielle", "indus", "industrie",
+        )):
+            return formation_code == "INGENIEUR_INDUSTRIEL"
+        if near_any((
             "mecan", "mecanique", "electromecanique", "maintenance", "industri",
-            "indus", "logistique", "production", "automatique", "robotique",
+            "logistique", "production", "automatique", "robotique",
         )):
             return formation_code in {"INGENIEUR_MECANIQUE", "INGENIEUR_INDUSTRIEL"}
         if near_any((

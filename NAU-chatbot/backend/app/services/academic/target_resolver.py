@@ -117,7 +117,13 @@ class AcademicTargetResolver:
                 if not code.startswith("LICENCE_")
             }
         code = next(
-            (value for key, value in aliases.items() if contains_phrase(text, key)),
+            (
+                value
+                for key, value in sorted(
+                    aliases.items(), key=lambda item: len(item[0]), reverse=True
+                )
+                if contains_phrase(text, key)
+            ),
             None,
         )
         code = code or self._fuzzy_alias_code(text, aliases)
