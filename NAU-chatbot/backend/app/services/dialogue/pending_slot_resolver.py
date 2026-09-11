@@ -97,7 +97,10 @@ class PendingSlotResolver:
                 and value not in blocked
                 and not any(
                     token in value.split()
-                    for token in {"nheb", "na9ra", "nkamel", "ingenieur", "prepa", "njaht", "naj7t", "valide", "validé"}
+                    for token in {
+                        "licence", "nheb", "na9ra", "nkamel", "ingenieur", "prepa",
+                        "njaht", "naj7t", "valide", "validé",
+                    }
                 )
             ):
                 aliases = {

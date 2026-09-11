@@ -105,6 +105,14 @@ class ChatOrchestrator:
             and self.pending_slots.is_affirmative(message)
         ):
             turn_type = TurnType.ACADEMIC
+        if (
+            state.active_state.pending_slot
+            and len(message.split()) <= 2
+            and turn_type is TurnType.SMALL_TALK
+        ):
+            # Short answers such as "infoo" or "indus" respond to the
+            # qualification question and must not be diverted to social NLU.
+            turn_type = TurnType.ACADEMIC
         session_id = str(state.session_id)
         log_stage("TURN_GATE", session_id=session_id, turn_type=turn_type.value)
 

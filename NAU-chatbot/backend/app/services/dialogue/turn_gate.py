@@ -109,6 +109,8 @@ class TurnGate:
             return TurnType.SECURITY
         if any(pattern.search(folded) for pattern in self.insults) or self._similar_insult(folded) or self._similar_insult(self._unmask_insults(raw)):
             return TurnType.INAPPROPRIATE
+        if re.search(r"\b(?:chkounek|chkoun)\s+enti\b|\benti\s+(?:chkounek|chkoun)\b", folded):
+            return TurnType.IDENTITY
         if self._has_intent("OUT_OF_SCOPE", folded):
             return TurnType.OUT_OF_SCOPE
         if len(folded) >= 3 and len(set(folded)) == 1:

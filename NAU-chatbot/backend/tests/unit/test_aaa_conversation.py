@@ -88,6 +88,19 @@ async def test_incomplete_licence_request_asks_for_specialty_before_recommending
 
 
 @pytest.mark.asyncio
+async def test_arabizi_specialty_answer_continues_pending_orientation(industrial_bot):
+    bot, _ = industrial_bot
+    state = ConversationState.new(uuid4())
+
+    await bot.process("ena licence 2", state)
+    result = await bot.process("infoo", state)
+
+    assert state.active_state.licence_specialty == "INFO"
+    assert "Je suis là pour continuer" not in result.answer
+    assert result.intents == ("ORIENTATION",)
+
+
+@pytest.mark.asyncio
 async def test_confirmed_profile_correction_clears_obsolete_licence_state(audit_bot):
     bot, _ = audit_bot
     state = ConversationState.new(uuid4())

@@ -70,6 +70,11 @@ def test_follow_up_social_response_does_not_greet_again() -> None:
     assert "Salut" not in gate.response(TurnType.HOW_ARE_YOU, first_reply=False)
 
 
+@pytest.mark.parametrize("message", ["bh chkounek enti", "enti chkoun"])
+def test_arabizi_identity_question_is_social(message: str) -> None:
+    assert TurnGate().classify(message) is TurnType.IDENTITY
+
+
 @pytest.mark.parametrize(
     "message",
     [
