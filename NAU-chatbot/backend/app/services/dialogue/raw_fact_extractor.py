@@ -7,7 +7,7 @@ from app.core.file_config import dialogue_config, pattern_file
 from app.domain.conversation.models import AcademicProfile, ConversationSubject
 from app.services.dialogue.contextual_modifier import ContextScope, ContextualModifierDetector
 from app.services.dialogue.negation_detector import NegationResult
-from app.services.dialogue.normalizer import contains_phrase, fold_text
+from app.services.dialogue.normalizer import contains_phrase, fold_text, normalize_degree_spelling
 
 
 @dataclass(frozen=True, slots=True)
@@ -18,6 +18,8 @@ class RawFacts:
     bac_average: float | None = None
     math_grade: float | None = None
     licence_specialty: str | None = None
+    licence_year: int | None = None
+    credential_answer: bool = False
     interests: tuple[str, ...] = ()
     target: str | None = None
     finishing_current_degree: bool = False
@@ -45,13 +47,18 @@ class RawFactExtractor:
         active_subject: ConversationSubject,
         negation: NegationResult,
     ) -> RawFacts:
-        text = fold_text(message)
+        text = normalize_degree_spelling(message)
         subject = self._subject(text, active_subject)
         profile = self._profile(text)
         bac = self._bac(text)
         average = self._number("average", text)
         math_grade = self._number("math_grade", text)
-        licence_specialty = self._capture("licence_specialty", text)
+        licence_year = self._licence_year(text)
+        # Keep clause boundaries when extracting the diploma: the following
+        # question is not part of its title. Full-message intent detection
+        # still sees every clause.
+        licence_specialty = next((value for clause in re.split(r'[,;?!\n]', message)
+                                  if (value := self._capture('licence_specialty', normalize_degree_spelling(clause)))), None)
         if (
             licence_specialty
             and self._matches("licence_holder", text)
@@ -77,6 +84,17 @@ class RawFactExtractor:
             target = "PREPA"
         elif has_goal and contains_phrase(text, "licence"):
             target = "LICENCE"
+        elif (
+            has_goal
+            and profile is AcademicProfile.LICENCE_STUDENT
+            and not any(
+                contains_phrase(text, term)
+                for term in ("ingenieur", "ingénieur", "ingenierie", "ingénierie", "prepa", "preparatoire")
+            )
+        ):
+            # "I am in licence and want to continue studying here" means
+            # continuation in the licence track unless engineering is explicit.
+            target = "LICENCE"
         if profile is AcademicProfile.PREPA_HOLDER and has_goal:
             target = "ENGINEERING"
         return RawFacts(
@@ -86,6 +104,7 @@ class RawFactExtractor:
             bac_average=average,
             math_grade=math_grade,
             licence_specialty=licence_specialty,
+            licence_year=licence_year,
             interests=tuple(interests),
             target=target,
             finishing_current_degree=self._matches("finishing", text),
@@ -150,6 +169,13 @@ class RawFactExtractor:
                 return value if 0 <= value <= 20 else None
         return None
 
+    def _licence_year(self, text: str) -> int | None:
+        for pattern in self.patterns.get("licence_year", []):
+            match = pattern.search(text)
+            if match:
+                return int(match.group("value"))
+        return None
+
     def _capture(self, name: str, text: str) -> str | None:
         for pattern in self.patterns.get(name, []):
             match = pattern.search(text)
@@ -163,6 +189,20 @@ class RawFactExtractor:
                 ]
                 if stops:
                     value = padded[1 : min(stops)].strip()
+                value = re.sub(
+                    r"^(?:[1-3](?:er|ere|ère|eme|ème|e)?|l[1-3])[_\s-]+",
+                    "",
+                    value,
+                    flags=re.I,
+                )
+                value = re.sub(
+                    r"[_\s-]+(?:l[1-3]|[1-3](?:er|ere|ère|eme|ème|e)?)$",
+                    "",
+                    value,
+                    flags=re.I,
+                )
+                if fold_text(value) in {"w", "wa", "fi", "fel", "en"}:
+                    return None
                 return value[:80].upper().replace(" ", "_") or None
         return None
 

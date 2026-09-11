@@ -24,16 +24,35 @@ class ProfileResolver:
             facts.correction or facts.profile.rank >= subject.profile.rank
         ):
             subject.profile = facts.profile
-        for field in ("bac_specialty", "bac_average", "math_grade", "target"):
+            if facts.correction:
+                subject.pending_slot = None
+                subject.asked_slots.clear()
+                subject.pending_action = None
+                subject.recommended_offer = None
+                subject.recommended_specialisation = None
+                subject.offer_intro_done = False
+                if facts.profile not in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER}:
+                    subject.licence_specialty = None
+                    subject.licence_year = None
+                    subject.finishing_current_degree = False
+        for field in ("bac_specialty", "bac_average", "math_grade", "licence_year", "target"):
+            if facts.denies_bac and field != "target":
+                continue
             value = getattr(facts, field)
             if value is not None:
                 setattr(subject, field, value)
         if (
             facts.licence_specialty is not None
+            and (facts.profile is not None or facts.credential_answer)
             and subject.profile
             in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER}
         ):
             subject.licence_specialty = facts.licence_specialty
+        if facts.licence_year is not None and subject.profile in {
+            AcademicProfile.LICENCE_STUDENT,
+            AcademicProfile.LICENCE_HOLDER,
+        }:
+            subject.licence_year = facts.licence_year
         if facts.math_grade is not None:
             subject.math_comfort = (
                 "HIGH" if facts.math_grade >= 14 else "MEDIUM" if facts.math_grade >= 10 else "LOW"

@@ -5,7 +5,11 @@ ROOT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT_DIR"
 
 env_value() {
-  awk -F= -v key="$1" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' .env
+  local value
+  value=$(awk -F= -v key="$1" '$1 == key {sub(/^[^=]*=/, ""); print; exit}' .env)
+  value=${value#\'}
+  value=${value%\'}
+  printf '%s' "$value"
 }
 
 for session in nau-frontend nau-backend nau-worker nau-speech nau-inference nau-chroma; do

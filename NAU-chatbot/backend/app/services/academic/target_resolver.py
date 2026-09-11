@@ -7,7 +7,7 @@ from difflib import SequenceMatcher
 from app.models.sqlalchemy import Formation, Specialisation
 from app.repositories.academic import PageRequest
 from app.services.academic.catalog_service import AcademicCatalogService
-from app.services.dialogue.normalizer import contains_phrase, fold_text
+from app.services.dialogue.normalizer import contains_phrase, fold_text, normalize_degree_spelling
 
 
 @dataclass(frozen=True, slots=True)
@@ -39,7 +39,7 @@ class AcademicTargetResolver:
         ))
 
     async def resolve_request(self, message: str) -> AcademicTargetResolution:
-        text = fold_text(message)
+        text = normalize_degree_spelling(message)
         owned_licence = self._describes_owned_licence(text)
         specs = (await self.catalogue.specialisations.list(PageRequest(page_size=100))).items
         spec_aliases = {
@@ -139,20 +139,32 @@ class AcademicTargetResolver:
 
     @staticmethod
     def _fuzzy_alias_code(text: str, aliases: dict[str, str]) -> str | None:
-        """Resolve a short, slightly misspelled catalogue choice conservatively."""
+        """Resolve catalogue choices from bounded token-level typo similarity."""
 
-        candidate = re.sub(r"[^a-z0-9 ]+", " ", text)
-        candidate = re.sub(r"\s+", " ", candidate).strip()
-        if not 4 <= len(candidate) <= 45 or len(candidate.split()) > 5:
+        candidate_tokens = re.sub(r"[^a-z0-9 ]+", " ", text).split()
+        if not candidate_tokens or len(candidate_tokens) > 12:
             return None
-        scored = sorted(
-            (
-                (SequenceMatcher(None, candidate, alias).ratio(), code)
-                for alias, code in aliases.items()
-                if len(alias) >= 4
-            ),
-            reverse=True,
-        )
+        scored: list[tuple[float, str]] = []
+        for alias, code in aliases.items():
+            alias_tokens = alias.split()
+            if not alias_tokens or len(alias_tokens) > len(candidate_tokens):
+                continue
+            windows = (
+                candidate_tokens[index:index + len(alias_tokens)]
+                for index in range(len(candidate_tokens) - len(alias_tokens) + 1)
+            )
+            best = max(
+                (
+                    sum(
+                        SequenceMatcher(None, expected, actual).ratio()
+                        for expected, actual in zip(alias_tokens, window)
+                    ) / len(alias_tokens)
+                    for window in windows
+                ),
+                default=0.0,
+            )
+            scored.append((best, code))
+        scored.sort(reverse=True)
         if not scored or scored[0][0] < 0.84:
             return None
         if len(scored) > 1 and scored[0][0] - scored[1][0] < 0.04:

@@ -10,6 +10,7 @@ from app.domain.recommendation.schemas import (
 )
 from app.models.sqlalchemy import Formation, RegleOrientation, Specialisation
 from app.repositories.academic import OrientationRuleRepository, PageRequest
+from app.services.dialogue.normalizer import fold_text
 
 
 DIPLOMA_BY_PROFILE = {
@@ -134,7 +135,7 @@ class EligibilityService:
             elif key == "diplome_origine":
                 if not subject.licence_specialty:
                     return None, "La spécialité du diplôme d'origine est inconnue."
-                if not _matches_expected(subject.licence_specialty, expected):
+                if _credential_label(subject.licence_specialty) not in {_credential_label(item) for item in _allowed(expected)}:
                     return False, "Le diplôme d'origine ne correspond pas à la règle publiée."
         return True, rule.description or f"La règle {rule.code} est satisfaite."
 
@@ -145,6 +146,16 @@ def _allowed(expected: Any) -> set[str]:
     if isinstance(expected, list):
         return {str(item).upper() for item in expected}
     return {str(expected).upper()}
+
+
+def _credential_label(value: str) -> str:
+    """Compare the same title with/without a redundant degree prefix, exactly."""
+    words = fold_text(value.replace('_', ' ')).split()
+    if len(words) > 1 and words[0] == 'licence':
+        words.pop(0)
+        if words and words[0] == 'en':
+            words.pop(0)
+    return ' '.join(words)
 
 
 def _matches_expected(actual: str | None, expected: Any) -> bool | None:

@@ -1,23 +1,71 @@
 patterns:
-  CATALOG: ['\b(quelles formations|quelle formations|formations disponibles|liste des formations|que propose l iit|formations propose)\b']
-  FEES: ['\b(frais|prix|cout|coût|tarif|mensualit[eé]|b9adech|b9addeh|b9adeh|9adech|9addech|9adeh|9addeh|par an|fel 3am|annuel)\b']
-  DURATION: ['\b(dur[eé]e|combien d annees|9addech snin)\b']
-  PROGRAMME: ['\b(programme|modules?|cours|contenu|mati[eè]res?|mawad|na9rahom|na9rahoum|najem\s+(?:na9ra|narahom)|chna9ra|chnouma\s+(?:les\s+)?mati[eè]res?|comment se passent les etudes|comment etudier|how study|qu est ce qu on etudie)\b']
-  CAREERS: ['\b(m[eé]tiers?|d[eé]bouch[eé]s?|khedma|travail|emploi|carri[eè]res?)\b']
-  MARKET: ['\b(march[eé]|demande|recrutement|avenir)\b']
-  CERTIFICATIONS: ['\b(certification|certificat)\b']
-  INTERNATIONAL: ['\b(international|mobilit[eé]|double dipl[oô]me|stage .*etranger)\b']
-  ACCREDITATION: ['\b(accr[eé]dit|label|reconnu|reconnaiss|mo3taraf|mo3taref|mo3tarfa|ma3tref|ma3rouf|m3ترف|معترف|iso|asiin|euro[ -]?inf|eur[ -]?ace)\w*\b']
-  ADMISSION: ['\b(admission|admis|accept[eé]|[eé]ligible|pr[eé]requis|conditions?\s+d['' ]?admission|concours)\b']
-  PAYMENT: ['\b(paye?r|paiement|payement|comptant|cash|reduction.*5|5\s*%.*reduction|reduction.*5\s*%)\b']
-  PREINSCRIPTION: ['\b(pr[eé][ -]?inscri\w*|inscrire|inscription|postuler|candidature)\b']
-  REGISTRATION_DOCUMENTS: ['\b(papiers?|documents?|pi[eè]ces?|dossier|wara9|awra9|lawra9|laxra9|wra9|chnouma\s+njib|chlazmni\s+njib|chlezemni\s+njib)\b']
-  CONTACT: ['\b(contact|t[eé]l[eé]phone|email|adresse)\b']
-  LOCATION: ['\b(localisation|emplacement|o[uù]\s+est|o[uù]\s+(?:se\s+)?trouve|w(?:i|e)n(?:e?k|ik)?|win\s+tj[iîi]|route|campus)\b']
-  SCHEDULE: ['\b(cours?\s+(?:du|de)?\s*soir[e]?|horaire?s?|emploi\s+du\s+temps|nocturne|lel\s+lil|fi\s+el\s+lil|(?:na9ra|n9ra|nakra|nkra)\s+(?:b|bel|fi|fel)\s*(?:el\s*)?lil)\b']
-  ORIENTATION: ['\b(orientation|recommand\w*|conseil\w*|choisir|meilleur|quelle formation|que puis je etudier|quoi etudier|je veux etudier|je souhaite etudier|etudier a l iit|continuer mes etudes|je suis perdu|nheb na9ra|nheb n9ra|nheb nkra|nheb nkamel|chnamel|chnaamel|tansahni|tensahni|chtansahni|chtnsahni)\b|نحب\s+نقر[اى]|شنو(?:ا)?\s+نتبع|عندي\s+الباك']
-  DETAILS: ['\b(d[eé]tail\w*|explique|plus d infos?|sp[eé]cialit[eé]s?|options?|fili[eè]res?|fasserli|nheb\s+(?:na3ref|naraf)\s+(?:akther|plus)|nzid\s+(?:na3ref|naraf)|akther\s+(?:d infos?|details?))\b']
-  DIFFICULTY: ['\b(difficile|facile|dur|peur|math faible|maths faibles|sehla|sahla|s3iba|sa3ba)\b']
-  PROFILE_RECALL: ['\b(ena bac chnou|ena bac chno|quel est mon bac|quelle est ma section(?: de bac)?|tu te rappelles de mon bac)\b|شنو(?:ا)?\s+(?:هو\s+)?الباك\s+متاعي']
-  PERSUASION: ['\b(pourquoi(?: choisir)?(?: l)? iit|avantage|convaincs|valeur|ahkili\w*\s+(?:al|ala)\s+(?:l\s+)?iit|a\s+propos\s+(?:de\s+)?(?:l\s+)?iit)\b']
-  OUT_OF_SCOPE: ['\b(?:m[eé]t[eé]o|weather|ta9s|taks|jaw|chna7wel|chnaoua\s+el\s+jaw|chnoua?\s+ta9s|chnoua?\s+el\s+jaw|football|match|real(?:\s+madrid)?|barca|koura|wa9teh\s+(?:tkawar|yel3eb)|recette|cuisine|couscous|mekla|cin[eé]ma|musique)\b']
+  CATALOG:
+  - \b(quelles formations|quelle formations|formations disponibles|liste des formations|que propose l iit|formations propose)\b
+  - \b(?:quels?\s+(?:sont\s+)?(?:les\s+)?parcours|tous?\s+les\s+(?:parcours|formations)|toutes\s+les\s+(?:formations|licences)|licences?\s+(?:disponibles?|proposees?))\b
+  - \b(?:chnowa|chnoua|chneya|chnouma)\s+(?:ne[jg]+em|na[jg]+em)\s+(?:na9ra|n9ra|nkra)\b
+  - ^licences?$
+  - \b(?:lprogramme|programme)\s+(?:mte3|mtaa|de)\s+(?:l\s+)?iit\b
+  FEES:
+  - \b(frais|prix|cout|coût|tarif|mensualit[eé]|b9adech|b9addeh|b9adeh|9adech|9addech|9adeh|9addeh|par an|fel 3am|annuel)\b
+  - \b(?:tarifs|mensualites|nedfa3|ndfa3)\b
+  DURATION:
+  - \b(dur[eé]e|combien d annees|9addech snin)\b
+  PROGRAMME:
+  - \b(programme|modules?|cours|contenu|mati[eè]res?|mawad|na9rahom|na9rahoum|najem\s+(?:na9ra|narahom)|chna9ra|chnouma\s+(?:les\s+)?mati[eè]res?|comment se passent
+    les etudes|comment etudier|how study|qu est ce qu on etudie)\b
+  - \blprogramme\b
+  CAREERS:
+  - \b(m[eé]tiers?|d[eé]bouch[eé]s?|khedma|travail|emploi|carri[eè]res?)\b
+  MARKET:
+  - \b(march[eé]|demande|recrutement|avenir)\b
+  CERTIFICATIONS:
+  - \b(certification|certificat)\b
+  - \bcertifs?\b
+  - \bcertifications?\b
+  INTERNATIONAL:
+  - \b(international|mobilit[eé]|double dipl[oô]me|stage .*etranger)\b
+  ACCREDITATION:
+  - \b(accr[eé]dit|label|reconnu|reconnaiss|mo3taraf|mo3taref|mo3tarfa|ma3tref|ma3rouf|m3ترف|معترف|iso|asiin|euro[ -]?inf|eur[ -]?ace)\w*\b
+  - \b(?:mitaref|mou3taref|mo3ترف)\b
+  ADMISSION:
+  - \b(admission|admis|accept[eé]|[eé]ligible|pr[eé]requis|conditions?\s+d[' ]?admission|concours)\b
+  - \b(?:ne[jg]+em|na[jg]+em|tnajem)\s+(?:nkamm?el|nkamel|nkamml)\b
+  - \b(?:puis\s+je|je\s+peux|est\s+ce\s+que\s+je\s+peux)\s+(?:integrer|entrer|rejoindre|etre\s+admis)\b
+  PAYMENT:
+  - \b(paye?r|paiement|payement|comptant|cash|reduction.*5|5\s*%.*reduction|reduction.*5\s*%)\b
+  PREINSCRIPTION:
+  - \b(pr[eé][ -]?inscri\w*|inscrire|inscription|postuler|candidature)\b
+  - \b(?:preinscrit\w*|preiscrit\w*|formulaire)\b
+  REGISTRATION_DOCUMENTS:
+  - \b(papiers?|documents?|pi[eè]ces?|dossier|wara9|awra9|lawra9|laxra9|wra9|chnouma\s+njib|chlazmni\s+njib|chlezemni\s+njib)\b
+  CONTACT:
+  - \b(contact|t[eé]l[eé]phone|email|adresse)\b
+  LOCATION:
+  - \b(localisation|emplacement|o[uù]\s+est|o[uù]\s+(?:se\s+)?trouve|w(?:i|e)n(?:e?k|ik)?|win\s+tj[iîi]|route|campus)\b
+  SCHEDULE:
+  - \b(cours?\s+(?:du|de)?\s*soir[e]?|horaire?s?|emploi\s+du\s+temps|nocturne|lel\s+lil|fi\s+el\s+lil|(?:na9ra|n9ra|nakra|nkra)\s+(?:b|bel|fi|fel)\s*(?:el\s*)?lil)\b
+  ORIENTATION:
+  - \b(orientation|recommand\w*|conseil\w*|choisir|meilleur|quelle formation|que puis je etudier|quoi etudier|je veux etudier|je souhaite etudier|etudier a l iit|continuer
+    mes etudes|je suis perdu|nheb na9ra|nheb n9ra|nheb nkra|nheb nkamel|chnamel|chnaamel|tansahni|tensahni|chtansahni|chtnsahni)\b|نحب\s+نقر[اى]|شنو(?:ا)?\s+نتبع|عندي\s+الباك
+  DETAILS:
+  - \b(d[eé]tail\w*|explique|plus d infos?|sp[eé]cialit[eé]s?|options?|fili[eè]res?|fasserli|nheb\s+(?:na3ref|naraf)\s+(?:akther|plus)|nzid\s+(?:na3ref|naraf)|akther\s+(?:d
+    infos?|details?))\b
+  DIFFICULTY:
+  - \b(difficile|facile|dur|peur|math faible|maths faibles|sehla|sahla|s3iba|sa3ba)\b
+  PROFILE_RECALL:
+  - '\b(ena bac chnou|ena bac chno|quel est mon bac|quelle est ma section(?: de bac)?|tu te rappelles de mon bac)\b|شنو(?:ا)?\s+(?:هو\s+)?الباك\s+متاعي'
+  PERSUASION:
+  - '\b(pourquoi(?: choisir)?(?: l)? iit|avantage|convaincs|valeur|ahkili\w*\s+(?:al|ala)\s+(?:l\s+)?iit|a\s+propos\s+(?:de\s+)?(?:l\s+)?iit)\b'
+  OUT_OF_SCOPE:
+  - \b(?:m[eé]t[eé]o|weather|ta9s|taks|jaw|chna7wel|chnaoua\s+el\s+jaw|chnoua?\s+ta9s|chnoua?\s+el\s+jaw|football|match|real(?:\s+madrid)?|barca|koura|wa9teh\s+(?:tkawar|yel3eb)|recette|cuisine|couscous|mekla|cin[eé]ma|musique)\b
+  PRACTICE:
+  - \b(?:pratiques?|tp|travaux\s+pratiques|laboratoires?|labs?|apprentissage\s+pratique|hands\s+on)\b
+  PROJECTS:
+  - \b(?:projets?\s+(?:tutores?|federes?|academiques?|appliques?)|pfe|projet\s+de\s+fin\s+d\s+etudes)\b
+  - \b(?:les|des|vos|quels?|el|fiha)\s+projets?\b
+  - \bprojets?\s+et\s+stages?\b
+  - ^projets?$
+  INTERNSHIPS:
+  - \bstages?\b
+  ALTERNANCE:
+  - \balternance\b

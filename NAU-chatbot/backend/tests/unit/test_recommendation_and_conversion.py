@@ -27,6 +27,67 @@ from app.services.recommendation.recommendation_service import RecommendationSer
 pytestmark = pytest.mark.unit
 
 
+@pytest.mark.parametrize(
+    ("specialty", "formation_code", "expected"),
+    [
+        ("INFO_DE_GESTION", "INGENIEUR_INFO", True),
+        ("IDUS", "INGENIEUR_INDUSTRIEL", True),
+        ("DROIT", "INGENIEUR_INFO", True),
+    ],
+)
+def test_external_or_misspelled_licence_still_allows_engineering_path(
+    specialty: str,
+    formation_code: str,
+    expected: bool,
+) -> None:
+    subject = SubjectState(
+        profile=AcademicProfile.LICENCE_HOLDER,
+        licence_specialty=specialty,
+    )
+
+    assert RecommendationService._formation_matches_academic_domain(
+        subject,
+        formation_code,
+    ) is expected
+
+
+@pytest.mark.parametrize(
+    ("specialty", "formation_code", "expected"),
+    [
+        ("INFO_DE_GESTION", "INGENIEUR_INFO", True),
+        ("COMPTABILITE", "INGENIEUR_INFO", True),
+        ("ELECTROMECANIQUE", "INGENIEUR_INDUSTRIEL", True),
+        ("ENERGETIQUE", "INGENIEUR_PROCEDES", True),
+    ],
+)
+def test_tunisian_licence_sections_map_to_engineering_domains(
+    specialty: str,
+    formation_code: str,
+    expected: bool,
+) -> None:
+    assert RecommendationService._formation_matches_academic_domain(
+        SubjectState(
+            profile=AcademicProfile.LICENCE_HOLDER,
+            licence_specialty=specialty,
+        ),
+        formation_code,
+    ) is expected
+
+
+def test_licence_student_who_wants_to_continue_at_iit_keeps_licence_path() -> None:
+    subject = SubjectState(
+        profile=AcademicProfile.LICENCE_STUDENT,
+        target="LICENCE",
+        licence_specialty="INFO_DE_GESTION",
+    )
+
+    assert RecommendationService._allowed_parcours(subject) == {"LICENCE"}
+    assert RecommendationService._formation_matches_academic_domain(
+        subject,
+        "LICENCE_INFO",
+    )
+
+
 class AlwaysEligible:
     async def evaluate(self, subject, formation, specialisation=None):
         del subject
@@ -48,6 +109,8 @@ def _catalogue(repository_factory):
             code="INGENIEUR_INFO",
             nom="Génie Informatique",
             description="Formation ingénieur informatique",
+            intitule_diplome="Diplôme National d'Ingénieur en Génie Informatique",
+            duree_annees=3,
             actif=True,
         )
     ]
@@ -82,6 +145,7 @@ def _catalogue(repository_factory):
             id=201,
             formation_id=10,
             specialisation_id=101,
+            type_element=SimpleNamespace(value="MODULE"),
             nom="Machine Learning",
             description="Big data et intelligence artificielle",
             actif=True,
@@ -90,6 +154,7 @@ def _catalogue(repository_factory):
             id=202,
             formation_id=10,
             specialisation_id=102,
+            type_element=SimpleNamespace(value="MODULE"),
             nom="Cybersécurité",
             description="Sécurité réseau",
             actif=True,
@@ -98,6 +163,7 @@ def _catalogue(repository_factory):
             id=203,
             formation_id=10,
             specialisation_id=103,
+            type_element=SimpleNamespace(value="MODULE"),
             nom="Développement logiciel",
             description="Web et cloud",
             actif=True,
@@ -264,6 +330,89 @@ async def test_completed_prepa_or_licence_still_targets_engineering(
 
     assert decision.primary is not None
     assert decision.primary.formation_code == "INGENIEUR_INFO"
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("subject", "expected"),
+    [
+        (
+            SubjectState(
+                profile=AcademicProfile.LICENCE_HOLDER,
+                licence_specialty="INFORMATIQUE",
+            ),
+            "relevés de notes",
+        ),
+        (
+            SubjectState(
+                profile=AcademicProfile.LICENCE_STUDENT,
+                licence_specialty="INFORMATIQUE",
+            ),
+            "entrée en deuxième année",
+        ),
+        (
+            SubjectState(profile=AcademicProfile.PREPA_HOLDER),
+            "suite logique est le cycle ingénieur",
+        ),
+        (
+            SubjectState(profile=AcademicProfile.PREPA_STUDENT),
+            "complément du cycle préparatoire",
+        ),
+    ],
+)
+async def test_orientation_explains_next_step_for_each_existing_profile(
+    subject: SubjectState,
+    expected: str,
+    repository_factory,
+) -> None:
+    catalogue = _new_bac_catalogue(repository_factory)
+    service = RecommendationService(catalogue, AlwaysEligible())
+    decision = await service.recommend(subject)
+
+    answer = await StructuredResponseBuilder(catalogue).orientation(subject, decision)
+
+    assert answer is not None
+    assert expected in answer
+
+
+@pytest.mark.asyncio
+async def test_in_progress_licence_states_validation_before_engineering(
+    repository_factory,
+) -> None:
+    subject = SubjectState(
+        profile=AcademicProfile.LICENCE_STUDENT,
+        target="LICENCE",
+        licence_specialty="INFORMATIQUE",
+    )
+    catalogue = _new_bac_catalogue(repository_factory)
+    decision = await RecommendationService(catalogue, AlwaysEligible()).recommend(subject)
+
+    answer = await StructuredResponseBuilder(catalogue).orientation(subject, decision)
+
+    assert answer is not None
+    assert "ta licence devra d'abord être validée" in answer
+    assert "ce n'est pas une admission automatique" in answer
+
+
+@pytest.mark.asyncio
+async def test_incomplete_licence_profile_does_not_present_fake_specialisation(
+    repository_factory,
+) -> None:
+    subject = SubjectState(
+        profile=AcademicProfile.LICENCE_STUDENT,
+        target="LICENCE",
+        licence_specialty="INFORMATIQUE",
+    )
+    catalogue = _new_bac_catalogue(repository_factory)
+    decision = await RecommendationService(catalogue, AlwaysEligible()).recommend(subject)
+
+    answer = await StructuredResponseBuilder(catalogue).orientation(subject, decision)
+
+    assert answer is not None
+    assert "Pour personnaliser cette orientation" in answer
+    assert "ta section de bac" in answer
+    assert "Big Data & Analyse des Données" not in answer
+    assert "Veux-tu voir le programme détaillé de cette formation ?" in answer
 
 
 @pytest.mark.asyncio

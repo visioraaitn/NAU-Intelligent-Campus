@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 from app.core.file_config import dialogue_config
 from app.domain.conversation.models import AcademicProfile, SubjectState
@@ -75,7 +76,7 @@ class RecommendationService:
                     PageRequest(page_size=100, filters={"formation_id": formation.id})
                 )
             ).items
-            options: list[Specialisation | None] = list(specs) if has_specific_interests else [None]
+            options: list[Specialisation | None] = list(specs) if has_specific_interests and specs else [None]
             elements = (
                 await self.catalogue.elements.list(
                     PageRequest(page_size=100, filters={"formation_id": formation.id})
@@ -228,6 +229,11 @@ class RecommendationService:
             if subject.bac_specialty:
                 return {"LICENCE"}
             return set()
+        if (
+            subject.profile is AcademicProfile.LICENCE_STUDENT
+            and subject.target == "LICENCE"
+        ):
+            return {"LICENCE"}
         return PROFILE_PARCOURS.get(subject.profile)
 
     @staticmethod
@@ -245,15 +251,39 @@ class RecommendationService:
             AcademicProfile.LICENCE_HOLDER,
         }:
             return True
+        if formation_code.startswith("LICENCE_"):
+            return True
         specialty = fold_text(subject.licence_specialty or "")
         if not specialty:
             return True
-        if any(term in specialty for term in ("info", "logiciel", "reseau", "data", "cyber")):
+        tokens = specialty.split()
+
+        def near_any(terms: tuple[str, ...]) -> bool:
+            return any(
+                term in token
+                or token in term
+                or SequenceMatcher(None, token, term).ratio() >= .78
+                for token in tokens
+                for term in terms
+            )
+
+        if near_any((
+            "info", "informatique", "gestion", "finance", "compta", "marketing",
+            "logiciel", "reseau", "data", "cyber", "decisionnel",
+        )):
             return formation_code == "INGENIEUR_INFO"
-        if any(term in specialty for term in ("civil", "batiment", "construction")):
+        if near_any(("civil", "batiment", "construction")):
             return formation_code == "INGENIEUR_CIVIL"
-        if any(term in specialty for term in ("mecan", "maintenance", "industri", "logistique")):
+        if near_any((
+            "mecan", "mecanique", "electromecanique", "maintenance", "industri",
+            "indus", "logistique", "production", "automatique", "robotique",
+        )):
             return formation_code in {"INGENIEUR_MECANIQUE", "INGENIEUR_INDUSTRIEL"}
-        if any(term in specialty for term in ("chim", "procede", "energie")):
+        if near_any((
+            "chim", "procede", "energie", "electrique", "electronique",
+            "energetique", "environnement",
+        )):
             return formation_code == "INGENIEUR_PROCEDES"
-        return False
+        # A licence outside the IIT catalogue can still lead to an engineering
+        # application; leave the final equivalence decision to admissions.
+        return True

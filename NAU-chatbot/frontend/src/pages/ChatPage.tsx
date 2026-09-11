@@ -33,7 +33,6 @@ export function ChatPage() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
-  const latestAnswerRef = useRef<HTMLElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const previousMessageCount = useRef(messages.length);
   const appendTranscription = useCallback((text: string) => {
@@ -48,7 +47,7 @@ export function ChatPage() {
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
     const newest = messages[messages.length - 1];
     if (messages.length > previousMessageCount.current && newest?.role === "assistant") {
-      latestAnswerRef.current?.focus({ preventScroll: true });
+      requestAnimationFrame(() => textareaRef.current?.focus());
     }
     previousMessageCount.current = messages.length;
   }, [messages]);
@@ -60,11 +59,20 @@ export function ChatPage() {
     textarea.style.height = `${Math.min(textarea.scrollHeight, 144)}px`;
   }, [input]);
 
+  useEffect(() => {
+    if (status !== "ready") return;
+    const focusTimer = window.setTimeout(() => {
+      textareaRef.current?.focus();
+    }, 0);
+    return () => window.clearTimeout(focusTimer);
+  }, [status, conversationId]);
+
   const submit = (event?: FormEvent) => {
     event?.preventDefault();
     const message = input.trim();
     if (!message || isBusy || !online) return;
     setInput("");
+    requestAnimationFrame(() => textareaRef.current?.focus());
     void send(message);
   };
 
@@ -159,19 +167,9 @@ export function ChatPage() {
                 />
               ) : (
                 <div className="message-list">
-                  {messages.map((message, index) => {
-                    const isLatestAnswer =
-                      message.role === "assistant" &&
-                      !messages.slice(index + 1).some((next) => next.role === "assistant");
-                    return (
-                      <ChatMessage
-                        key={message.id}
-                        ref={isLatestAnswer ? latestAnswerRef : undefined}
-                        message={message}
-                        latestAssistantMessage={isLatestAnswer}
-                      />
-                    );
-                  })}
+                  {messages.map((message) => (
+                    <ChatMessage key={message.id} message={message} />
+                  ))}
                   {status === "sending" && <ChatLoadingMessage />}
                   <div ref={endRef} />
                 </div>

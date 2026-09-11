@@ -26,6 +26,12 @@ patterns:
   licence_student:
     - '\b(en licence|na9ra licence|étudiant en licence|etudiant en licence)\b'
     - '\b(ena|je suis)\s+(?:en\s+)?licence\b'
+    - '\b(?:licence|l)\s*(?:1|2|3)\b|\b(?:1er|1ere|1ère|2eme|2ème|3eme|3ème)\s+ann(?:e|é)e\s+(?:de\s+)?licence\b'
+    - '\b(?:licence|l[1-3])\b.*\b(?:en cours|mazel(?:t)?|encore|still|pas encore)\b'
+    - '^\s*licence\s+[a-z0-9]'
+  licence_year:
+    - '\b(?:licence|l)\s*(?P<value>[123])\b'
+    - '\b(?P<value>[123])(?:er|ere|ère|eme|ème|e)?\s+ann(?:e|é)e\s+(?:de\s+)?licence\b'
   prepa_holder:
     - '\b(j''ai fini|j ai fini|dipl[oô]m[eé]|termin[eé]).*(pr[eé]pa|preparatoire)\b'
     - '\b(?:j''ai|j ai|ena)\s+(?:d[eé]j[aà]\s+)?(?:fini|termin[eé]|valid[eé]|r[eé]ussi|kammelt|kamalt)\w*.*\b(?:la\s+)?(?:pr[eé]pa|prepa|preparatoire)\b'
@@ -51,7 +57,7 @@ patterns:
   pending_bac_level:
     - '^\s*(?P<average>\d{1,2}(?:[.,]\d+)?)\s*(?:w|et|,)\s*(?P<math>\d{1,2}(?:[.,]\d+)?)\s*$'
 terms:
-  capture_stop: [ena, je suis, j ai, je veux, je souhaite, i am, i have, nheb, na9ra, bech, bich, pour, afin, et, nkamel, tansahni, tensahni]
+  capture_stop: [ena, je suis, j ai, je veux, je souhaite, je peux, puis je, est ce, quels, quelles, combien, comment, i am, i have, nheb, na9ra, bech, bich, pour, afin, et, w, wa, fi, fel, en, nkamel, tansahni, tensahni]
   bac_math: [bac math, mathématiques, mathematiques, باك رياضيات, الباك رياضيات]
   bac_sciences: [bac sciences, sciences expérimentales, sciences experimentales, باك علوم, الباك علوم]
   bac_info: [bac info, bac informatique, باك إعلامية, الباك إعلامية]

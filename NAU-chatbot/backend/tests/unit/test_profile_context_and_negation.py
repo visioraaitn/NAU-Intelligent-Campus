@@ -102,6 +102,41 @@ def test_successfully_completed_licence_is_a_holder_profile(message: str) -> Non
     assert state.active_state.profile is AcademicProfile.LICENCE_HOLDER
 
 
+@pytest.mark.parametrize(
+    ("message", "year"),
+    [
+        ("ena licence", None),
+        ("je suis en licence informatique", None),
+        ("ena licence 2 info", 2),
+        ("je suis en L3 informatique", 3),
+        ("mazelt en licence, L1", 1),
+        ("licence idus", None),
+    ],
+)
+def test_bare_or_in_progress_licence_is_not_assumed_validated(
+    message: str,
+    year: int | None,
+) -> None:
+    state = ConversationState.new(uuid4())
+    facts, negation = _extract(message, state)
+
+    ProfileResolver().apply(state, facts, negation)
+
+    assert facts.profile is AcademicProfile.LICENCE_STUDENT
+    assert state.active_state.profile is AcademicProfile.LICENCE_STUDENT
+    assert state.active_state.licence_year == year
+
+
+def test_licence_student_continuation_without_repeating_licence_targets_licence() -> None:
+    facts, _ = _extract(
+        "ena licence w nheb nkamel na9ra andkom",
+        ConversationState.new(uuid4()),
+    )
+
+    assert facts.profile is AcademicProfile.LICENCE_STUDENT
+    assert facts.target == "LICENCE"
+
+
 def test_completed_licence_statement_does_not_create_a_fake_specialty() -> None:
     facts, _ = _extract("ya weldi ena njaht fel licence sayey", ConversationState.new(uuid4()))
 
@@ -337,3 +372,34 @@ def test_licence_info_engineering_goal_is_extracted_without_polluting_specialty(
     assert state.active_state.licence_specialty == "INFO"
     assert state.active_state.target == "ENGINEERING"
     assert state.active_state.interests == ["GENERAL_INFO"]
+
+
+@pytest.mark.parametrize(
+    "message,expected_specialty",
+    [
+        ("ena licence w nheb nhawel na9ra andkom", None),
+        ("ena licence w nheb nkamel na9ra andkom", None),
+        ("ena licence info", "INFO"),
+        ("ena licence 2 info", "INFO"),
+        ("j'ai validé ma licence en informatique", "INFORMATIQUE"),
+        ("licence maintenance industrielle", "MAINTENANCE_INDUSTRIELLE"),
+    ],
+)
+def test_licence_specialty_capture_ignores_tunisian_connectors(
+    message: str, expected_specialty: str | None
+) -> None:
+    state = ConversationState.new(uuid4())
+    facts, negation = _extract(message, state)
+
+    ProfileResolver().apply(state, facts, negation)
+
+    assert state.active_state.licence_specialty == expected_specialty
+
+
+def test_pending_licence_specialty_accepts_arabizi_typo() -> None:
+    state = ConversationState.new(uuid4())
+    state.active_state.pending_slot = "LICENCE_SPECIALTY"
+    result = PendingSlotResolver().resolve("infoo", state.active_state)
+
+    assert result.parsed is True
+    assert state.active_state.licence_specialty == "INFO"

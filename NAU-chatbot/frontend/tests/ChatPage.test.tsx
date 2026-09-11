@@ -171,6 +171,38 @@ describe("ChatPage", () => {
     expect(screen.queryByText("alert(1)", { selector: "script" })).not.toBeInTheDocument();
   });
 
+  it("returns the cursor to the message input when the answer is ready", async () => {
+    const user = userEvent.setup();
+    const view = renderPage();
+
+    const input = screen.getByLabelText("Votre message");
+    await user.type(input, "Bonjour");
+    await user.click(screen.getByRole("button", { name: "Envoyer le message" }));
+
+    chatState = {
+      messages: [
+        userMessage,
+        {
+          id: "assistant-1",
+          role: "assistant",
+          content: "Bonjour !",
+          createdAt: "2026-09-01T09:01:00Z",
+          delivery: "sent",
+        },
+      ],
+      status: "ready",
+      error: null,
+      isBusy: false,
+    };
+    view.rerender(
+      <MemoryRouter>
+        <ChatPage />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => expect(view.container.querySelector("#chat-message")).toHaveFocus());
+  });
+
   it("keeps multiline input behavior", async () => {
     const user = userEvent.setup();
     renderPage();

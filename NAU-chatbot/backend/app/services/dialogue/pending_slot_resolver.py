@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from difflib import SequenceMatcher
 
 from app.domain.conversation.models import AcademicProfile, SubjectState
 from app.core.file_config import pattern_file
@@ -16,7 +17,7 @@ class PendingSlotResult:
 
 
 class PendingSlotResolver:
-    AFFIRMATIVE_PATTERN = re.compile(r"^(?:oui+|yes|ey+|eey+|be+hi|d'accord|ok+)$", re.I)
+    AFFIRMATIVE_PATTERN = re.compile(r"^(?:(?:bh|beh|behi)\s+)?(?:oui+|yes|ey+|eey+|ay+h?|eyh|be+hi|d'accord|ok+)$", re.I)
 
     def __init__(self) -> None:
         self.pair_patterns = [
@@ -24,7 +25,7 @@ class PendingSlotResolver:
             for value in pattern_file("profiles").patterns["pending_bac_level"]
         ]
 
-    def resolve(self, message: str, state: SubjectState) -> PendingSlotResult:
+    def resolve(self, message: str, state: SubjectState, *, provided_fields: set[str] | None = None) -> PendingSlotResult:
         folded = fold_text(message).strip()
         if state.pending_action:
             action = state.pending_action
@@ -38,11 +39,13 @@ class PendingSlotResolver:
         slot = state.pending_slot
         if not slot:
             return PendingSlotResult()
-        previous = tuple(state.last_intents)
+        # These qualification slots belong to orientation, even if a factual
+        # question or registration request intervened before the answer.
+        previous = ("ORIENTATION",) if slot in {"PROFILE", "BAC_SPECIALTY", "LICENCE_SPECIALTY", "INTEREST"} else tuple(state.last_intents)
         parsed_slots = {
             "PROFILE": state.profile is not AcademicProfile.UNKNOWN,
             "BAC_SPECIALTY": bool(state.bac_specialty),
-            "LICENCE_SPECIALTY": bool(state.licence_specialty),
+            "LICENCE_SPECIALTY": bool(state.licence_specialty) and (provided_fields is None or 'licence_specialty' in provided_fields),
             "INTEREST": bool(state.interests),
         }
         if parsed_slots.get(slot, False):
@@ -81,6 +84,43 @@ class PendingSlotResolver:
                     state.math_comfort = "HIGH" if math >= 14 else "MEDIUM" if math >= 10 else "LOW"
                     state.pending_slot = None
                     return PendingSlotResult(True, previous)
+        if slot == "LICENCE_SPECIALTY":
+            value = re.sub(r"\s+", " ", folded).strip()
+            blocked = {
+                "w", "wa", "et", "nheb", "na9ra", "nkamel", "je veux",
+                "je souhaite", "ingenieur", "ingénieur", "cycle ingenieur",
+                "prepa", "preparatoire", "njaht", "naj7t", "valide", "validé",
+                "licence",
+            }
+            if (
+                value
+                and value not in blocked
+                and not any(
+                    token in value.split()
+                    for token in {"nheb", "na9ra", "nkamel", "ingenieur", "prepa", "njaht", "naj7t", "valide", "validé"}
+                )
+            ):
+                aliases = {
+                    "INFO": ("info", "informatique", "informatique de gestion"),
+                    "INDUSTRIELLE": ("indus", "industrielle", "industriel"),
+                    "MAINTENANCE_INDUSTRIELLE": ("maintenance industrielle",),
+                    "MECANIQUE": ("mecanique", "mécanique"),
+                    "ELECTRIQUE": ("electrique", "électrique"),
+                    "GESTION": ("gestion",),
+                }
+                normalized = re.sub(r"(.)\1+", r"\1", value)
+                best_code, best_score = None, 0.0
+                for code, candidates in aliases.items():
+                    for candidate in candidates:
+                        score = SequenceMatcher(None, normalized, fold_text(candidate)).ratio()
+                        if score > best_score:
+                            best_code, best_score = code, score
+                if best_code and best_score >= 0.72:
+                    state.licence_specialty = best_code
+                else:
+                    state.licence_specialty = value.upper().replace(" ", "_")
+                state.pending_slot = None
+                return PendingSlotResult(True, previous)
         return PendingSlotResult(False, previous)
 
     @classmethod

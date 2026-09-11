@@ -90,6 +90,7 @@ def _orchestrator(repository_factory):
             ]
         ),
         elements=repository_factory([]),
+        orientation_rules=repository_factory([]),
     )
     rag = CapturingRag()
     return (

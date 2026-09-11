@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { speechApi } from "../../api/speech";
+import { ApiError } from "../../api/http";
 
 export type VoiceInputStatus = "idle" | "recording" | "transcribing" | "error";
 
@@ -7,6 +8,7 @@ const preferredMimeTypes = [
   "audio/webm;codecs=opus",
   "audio/webm",
   "audio/ogg;codecs=opus",
+  "audio/mp4",
 ];
 
 function recorderOptions(): MediaRecorderOptions | undefined {
@@ -53,9 +55,11 @@ export function useVoiceRecorder(onTranscription: (text: string) => void) {
       onTranscriptionRef.current(response.text);
       setError(null);
       setStatus("idle");
-    } catch {
+    } catch (cause) {
       if (!mountedRef.current) return;
-      setError("La transcription audio a échoué. Réessayez.");
+      setError(cause instanceof ApiError
+        ? (cause.status === 503 ? "Le service vocal est temporairement indisponible. Réessayez dans un instant." : cause.message)
+        : "La transcription audio a échoué. Réessayez.");
       setStatus("error");
     }
   }, [stopTracks]);
@@ -123,12 +127,15 @@ export function useVoiceRecorder(onTranscription: (text: string) => void) {
     if (status !== "transcribing") void startRecording();
   }, [startRecording, status, stopRecording]);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    discardRef.current = true;
-    const recorder = recorderRef.current;
-    if (recorder && recorder.state !== "inactive") recorder.stop();
-    stopTracks();
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      discardRef.current = true;
+      const recorder = recorderRef.current;
+      if (recorder && recorder.state !== "inactive") recorder.stop();
+      stopTracks();
+    };
   }, [stopTracks]);
 
   return { status, error, toggleRecording };

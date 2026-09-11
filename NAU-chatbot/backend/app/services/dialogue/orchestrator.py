@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import logging
 import re
-from dataclasses import dataclass
+from copy import deepcopy
+from dataclasses import dataclass, replace
 
 from app.domain.conversation.models import (
     AcademicProfile,
@@ -40,7 +41,7 @@ from app.services.dialogue.prompt_composer import PromptComposer
 from app.services.dialogue.qualification_policy import QualificationPolicy
 from app.services.dialogue.raw_fact_extractor import RawFactExtractor
 from app.services.dialogue.response_policy import focus_topics, response_mode
-from app.services.dialogue.structured_response import StructuredResponseBuilder
+from app.services.dialogue.structured_response import FORMATION_LINKS, StructuredResponseBuilder
 from app.services.dialogue.turn_gate import TurnGate, TurnType
 from app.services.eligibility import EligibilityService
 from app.services.llm.providers import LLMProvider
@@ -113,6 +114,36 @@ class ChatOrchestrator:
         if turn_type in {TurnType.SECURITY, TurnType.INAPPROPRIATE, TurnType.EMPTY}:
             # Refusal gates do not mutate academic or conversational profile memory.
             return DialogueResponse(self.turn_gate.response(turn_type, first_reply=first_reply), state)
+        if not state.active_state.pending_action and self.pending_slots.is_affirmative(message):
+            return self._fixed(message, state, TurnType.SMALL_TALK, first_reply)
+        original_state = state.model_copy(deep=True)
+        semantic = None
+        semantic_context = (
+            f"Formation évoquée : {state.active_state.recommended_offer or 'non précisée'}. "
+            f"Spécialisation : {state.active_state.recommended_specialisation or 'non précisée'}."
+        ) if state.active_state.recommended_offer else ""
+        if len(message.split()) <= 2:
+            # A previous answer must not give an unrelated short token a new
+            # meaning. The normal target-memory path resolves the scope later.
+            semantic_context = ""
+        if turn_type is TurnType.SMALL_TALK:
+            try:
+                semantic = await self.esprit.understand_social(message)
+            except Exception:
+                logger.warning("SOCIAL_UNDERSTANDING unavailable")
+            try:
+                semantic = semantic or await self.esprit.understand(message, semantic_context)
+            except Exception:
+                logger.warning("SEMANTIC_UNDERSTANDING unavailable")
+            if semantic and semantic.domain.confidence >= .8:
+                if semantic.domain.label == "INAPPROPRIATE":
+                    return self._refuse_inappropriate(state, original_state)
+                if semantic.domain.label == "SOCIAL" and semantic.social:
+                    return self._fixed(message, state, TurnType(semantic.social), first_reply)
+                if semantic.domain.label == "IN_SCOPE" and semantic.domain.iit_signal:
+                    turn_type = TurnType.ACADEMIC
+                elif semantic.domain.label == "OUT_OF_SCOPE" and len(message.split()) > 2:
+                    return self._fixed(message, state, TurnType.OUT_OF_SCOPE, first_reply)
         if turn_type is not TurnType.ACADEMIC:
             return self._fixed(message, state, turn_type, first_reply)
 
@@ -124,17 +155,99 @@ class ChatOrchestrator:
             active_subject=state.active_subject,
             negation=negation,
         )
+        turn_subject = state.subjects[facts.subject]
+        if facts.subject != state.active_subject:
+            semantic_context = (
+                f"Formation évoquée : {turn_subject.recommended_offer}. "
+                f"Spécialisation : {turn_subject.recommended_specialisation or 'non précisée'}."
+            ) if turn_subject.recommended_offer else ''
+        # A pending question concerns the original diploma, not an IIT offer.
+        # Only interpret a free-form answer when it has no explicit new topic.
+        early_target = await self.target_resolver.resolve_request(message)
+        raw_intents = self.intents.detect(message, previous=(), scope=ContextScope.CURRENT,
+                                         dialogue_act=DialogueAct.ASK_INFORMATION, slot_parsed=False)
+        if (facts.profile is AcademicProfile.NEW_BAC and raw_intents != ['GENERAL']
+                and not facts.correction and facts.subject == state.active_subject
+                and re.search(r'\bpour (?:un|le|les) bac\b', fold_text(message))):
+            # A question about entry requirements/costs for a type of bac is
+            # not a new claim about the speaker's current qualification.
+            facts = replace(facts, profile=None, bac_specialty=None,
+                            bac_average=None, math_grade=None)
+        existing_credential = fold_text((state.active_state.licence_specialty or '').replace('_', ' '))
+        clarifies_credential = state.active_state.pending_slot in {'LICENCE_SPECIALTY', 'PROFILE_CONFIRMATION'} or (existing_credential and existing_credential in fold_text(message))
+        if clarifies_credential and state.active_state.profile in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER} and not (facts.profile or facts.target or early_target.target) and raw_intents == ['GENERAL']:
+            specialty = facts.licence_specialty
+            if not specialty:
+                try:
+                    specialty = await self.esprit.understand_credential(message)
+                except Exception:
+                    logger.warning('CREDENTIAL_UNDERSTANDING unavailable')
+            if specialty:
+                facts = replace(facts, licence_specialty=specialty, credential_answer=True)
+        if state.active_state.pending_slot == 'PROFILE_CONFIRMATION' and facts.profile and facts.subject == state.active_subject:
+            facts = replace(facts, correction=True)
+        elif (facts.profile and facts.profile.rank < state.active_state.profile.rank
+              and not facts.correction and facts.subject == state.active_subject):
+            state.active_state.pending_slot = 'PROFILE_CONFIRMATION'
+            answer = (self.structured.profile_summary(state.active_state)
+                      + " Tu évoques maintenant un autre niveau. Est-ce une correction de ton niveau actuel ? "
+                      "Précise ton niveau actuel : bac, licence en cours ou licence obtenue, par exemple.")
+            state.active_state.last_question_asked = answer
+            return self._finish(state, message, answer, ['ORIENTATION'], DialogueAct.ANSWER_SLOT, first_reply)
+        if raw_intents == ['GENERAL'] and early_target.target is not None and not (facts.profile or facts.target):
+            # Resolve an explicit catalogue selection before a fallible model
+            # can broaden it into a request for all formations.
+            raw_intents = ['DETAILS']
+        contextual_intents = self.intents.detect(
+            message, previous=(), scope=ContextScope.CURRENT,
+            dialogue_act=DialogueAct.ASK_INFORMATION, slot_parsed=False,
+        ) if turn_subject.recommended_offer else []
         strong_academic_signal = bool(
             facts.profile
             or facts.interests
+            or facts.licence_specialty
+            or early_target.target is not None
+            or (len(message.split()) == 1 and raw_intents != ['GENERAL'])
+            or (
+                facts.scope is ContextScope.ALL
+                and self.intents.context.is_elliptical_expansion(message)
+                and set(turn_subject.last_intents).difference({"GENERAL", "OUT_OF_SCOPE"})
+            )
+            or (state.active_state.pending_action and self.pending_slots.is_affirmative(message))
+            or (
+                state.active_state.pending_slot
+                and self.pending_slots.resolve(message, deepcopy(state.active_state)).parsed
+            )
+            or re.fullmatch(r"(?:nhebek\s+)?(?:tensahni|tansahni|chtansahni)[ ?.!]*", fold_text(message))
             or self.turn_gate.has_strong_academic_signal(message)
+            or (
+                turn_subject.recommended_offer
+                and set(contextual_intents).intersection({
+                    "FEES", "PROGRAMME", "CERTIFICATIONS", "PRACTICE", "PROJECTS", "DURATION",
+                    "INTERNSHIPS", "ALTERNANCE", "LOCATION", "SCHEDULE", "CAREERS",
+                    "ACCREDITATION", "PREINSCRIPTION", "CONTACT", "PAYMENT", "ADMISSION",
+                })
+            )
         )
         domain = None
         if not strong_academic_signal:
             try:
-                domain = await self.esprit.classify_domain(message)
+                semantic = semantic or await self.esprit.understand(message, semantic_context)
+                domain = semantic.domain
+                if domain.confidence < .8:
+                    semantic = None
+                    domain = None
             except Exception:
-                logger.warning("DOMAIN_GATE unavailable", exc_info=True)
+                logger.warning("SEMANTIC_UNDERSTANDING unavailable")
+            if domain is None:
+                try:
+                    domain = await self.esprit.classify_domain(message)
+                except Exception:
+                    logger.warning("DOMAIN_GATE unavailable", exc_info=True)
+        if domain and domain.label == "INAPPROPRIATE":
+            return self._refuse_inappropriate(state, original_state)
+        if domain and domain.label == "SOCIAL" and semantic and semantic.social:
+            return self._fixed(message, state, TurnType(semantic.social), first_reply)
         if domain and domain.label == "OUT_OF_SCOPE" and not strong_academic_signal:
             # Some model builds emit a useful label with confidence=0.  A low
             # score therefore changes the wording (clarification vs refusal),
@@ -162,6 +275,7 @@ class ChatOrchestrator:
                 DialogueAct.ASK_INFORMATION,
                 first_reply,
             )
+        previous_scope = state.active_state.last_scope if facts.subject == state.active_subject else ContextScope.CURRENT.value
         self.profile_resolver.apply(state, facts, negation)
         subject = state.active_state
         if negation.request_alternative:
@@ -180,7 +294,11 @@ class ChatOrchestrator:
             bac=facts.bac_specialty,
         )
 
-        pending = self.pending_slots.resolve(message, subject)
+        pending = self.pending_slots.resolve(message, subject, provided_fields={
+            name for name in ('licence_specialty', 'profile', 'bac_specialty') if getattr(facts, name) is not None
+            and (name != 'licence_specialty' or facts.profile is not None or facts.credential_answer)
+        })
+        all_paths_requested = self._asks_all_paths(message) or (pending.parsed and previous_scope == ContextScope.ALL.value)
         esprit_result = ""
         act = self.dialogue_acts.detect(
             message,
@@ -197,6 +315,34 @@ class ChatOrchestrator:
             dialogue_act=act,
             slot_parsed=pending.parsed,
         )
+        if raw_intents == ['DETAILS'] and intents == ['GENERAL']:
+            intents = ['DETAILS']
+        if facts.licence_specialty and subject.profile in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER} and raw_intents == ['GENERAL']:
+            intents = ['ORIENTATION']
+        if (facts.profile or facts.target) and intents == ['GENERAL']:
+            intents = ['ORIENTATION']
+        if semantic is None and intents in (["GENERAL"], ["DETAILS"]) and len(message.split()) >= 5 and not pending.parsed and early_target.target is None:
+            try:
+                semantic = await self.esprit.understand(message, semantic_context)
+            except Exception:
+                logger.warning("SEMANTIC_UNDERSTANDING unavailable")
+        if semantic and semantic.domain.label == "INAPPROPRIATE" and semantic.domain.confidence >= .8:
+            return self._refuse_inappropriate(state, original_state)
+        if intents in (["GENERAL"], ["DETAILS"]) and semantic and semantic.domain.label == "IN_SCOPE" and semantic.domain.confidence >= .8 and semantic.intents:
+            # Model intents are validated against the contract; no spelling
+            # variant or regex is needed to route an unfamiliar expression.
+            normalized_intents = self.intents.detect(
+                semantic.normalized, previous=(), scope=ContextScope.CURRENT,
+                dialogue_act=DialogueAct.ASK_INFORMATION, slot_parsed=False,
+            )
+            intents = list(dict.fromkeys(
+                [intent for intent in intents if intent != "GENERAL"]
+                + list(semantic.intents)
+                + [intent for intent in normalized_intents if intent in {
+                    "PRACTICE", "PROJECTS", "INTERNSHIPS", "CERTIFICATIONS",
+                    "FEES", "DURATION", "ALTERNANCE",
+                }]
+            ))
         if (
             intents == ["GENERAL"]
             and not pending.forced_intents
@@ -225,6 +371,8 @@ class ChatOrchestrator:
         log_stage("ESPRIT_RESULT", session_id=session_id, available=bool(esprit_result))
         if pending.forced_intents:
             intents = list(pending.forced_intents)
+        if "CATALOG" in intents and re.search(r"\b(?:pour moi|que je|ne[jg]+em|na[jg]+em)\b", fold_text(message)):
+            intents = ["ORIENTATION" if intent == "CATALOG" else intent for intent in intents]
         if facts.profile and intents == ["GENERAL"]:
             intents = ["ORIENTATION"]
         if facts.target and intents == ["GENERAL"]:
@@ -233,13 +381,20 @@ class ChatOrchestrator:
             subject.recommended_offer = None
             subject.recommended_specialisation = None
             subject.offer_intro_done = False
-            intents = ["ORIENTATION"]
+            if intents == ['GENERAL']:
+                intents = ['ORIENTATION']
         if facts.denies_bac and intents == ["GENERAL"]:
             intents = ["ORIENTATION"]
         if "OUT_OF_SCOPE" in intents:
             answer = self._out_of_scope_answer()
             return self._finish(state, message, answer, ["OUT_OF_SCOPE"], act, first_reply)
-        target_resolution = await self.target_resolver.resolve_request(message)
+        target_resolution = early_target
+        if (
+            target_resolution.target is None and not target_resolution.unavailable_label
+            and semantic and semantic.domain.label == "IN_SCOPE"
+            and semantic.domain.confidence >= .8 and semantic.normalized
+        ):
+            target_resolution = await self.target_resolver.resolve_request(semantic.normalized)
         target = target_resolution.target
         if subject.recommended_offer:
             contextual_target = await self._contextual_specialisation_choice(
@@ -286,6 +441,13 @@ class ChatOrchestrator:
             intents = ["DETAILS"]
         elif facts.interests and intents == ["GENERAL"]:
             intents = ["ORIENTATION"]
+        if (
+            target is None and subject.recommended_offer
+            and not target_resolution.unavailable_label
+            and not {"ORIENTATION", "CATALOG"}.intersection(intents)
+            and not (facts.scope is ContextScope.ALL and "FEES" in intents)
+        ):
+            target = await self._remembered_target(subject.recommended_offer, subject.recommended_specialisation)
         needs_eligibility = bool(
             {"ADMISSION", "ORIENTATION", "PREINSCRIPTION"}.intersection(intents)
         )
@@ -302,54 +464,27 @@ class ChatOrchestrator:
                 status=eligibility.status.value,
                 formation=eligibility.formation_code,
             )
-            if eligibility.status is EligibilityStatus.NOT_ELIGIBLE:
-                alternative = (
-                    await self.recommendation_service.recommend(subject)
-                    if "ORIENTATION" in intents or "ADMISSION" in intents
-                    else None
-                )
-                answer = self.fallback.build(intents, (), alternative, eligibility)
-                if alternative and alternative.primary:
-                    subject.recommended_offer = alternative.primary.formation_code
-                    subject.recommended_specialisation = (
-                        alternative.primary.specialisation_code
-                    )
-                    subject.offer_intro_done = True
-                    subject.last_recommendation_turn = state.turn_count
-                    subject.conversion_stage = ConversionStage.RECOMMENDATION
-                subject.last_intents = intents
-                subject.last_scope = facts.scope.value
-                subject.last_dialogue_act = act.value
-                subject.last_user_message = message
-                subject.last_answer_focus = focus_topics(intents)
-                subject.covered_topics = list(
-                    dict.fromkeys(
-                        (*subject.covered_topics, *subject.last_answer_focus)
-                    )
-                )
-                result = self._finish(
-                    state,
-                    message,
-                    answer,
-                    intents,
-                    act,
-                    first_reply,
-                    eligibility=eligibility,
-                )
-                subject.last_answer_text = result.answer
-                return result
-
+        qualification_question = None
         slot = self.qualification.choose(subject, intents)
-        if slot and subject.asked_slots.get(slot, 0) == 0:
+        if slot and (
+            subject.asked_slots.get(slot, 0) == 0
+            or subject.pending_slot == slot
+        ):
             question = self.qualification.ask(slot, subject, state.turn_count)
             subject.last_intents = intents
+            subject.last_scope = ContextScope.ALL.value if all_paths_requested else facts.scope.value
             subject.last_dialogue_act = act.value
             subject.last_user_message = message
             subject.conversion_stage = ConversionStage.QUALIFICATION
-            return self._finish(state, message, question, intents, act, first_reply)
+            if not set(intents).difference({"ORIENTATION", "GENERAL", "DETAILS"}):
+                return self._finish(state, message, question, intents, act, first_reply)
+            qualification_question = question
 
         recommendation: RecommendationDecision | None = None
-        if "ORIENTATION" in intents or "PREINSCRIPTION" in intents:
+        credential_options = await self.structured.credential_options(subject) if 'ORIENTATION' in intents else []
+        if credential_options:
+            recommendation = RecommendationDecision(None, None)
+        elif not qualification_question and ("ORIENTATION" in intents or ("PREINSCRIPTION" in intents and target is None)):
             recommendation = await self.recommendation_service.recommend(subject)
             log_stage(
                 "RECOMMENDATION",
@@ -374,8 +509,20 @@ class ChatOrchestrator:
             # option, not for another repetition of the selected option.
             target = AcademicTarget(target.formation)
 
-        if "ORIENTATION" in intents and recommendation is not None and recommendation.primary is None:
-            answer = self.structured.no_confirmed_orientation(subject)
+        if "ORIENTATION" in intents and recommendation is not None and recommendation.primary is None and not all_paths_requested:
+            answer = self.structured.no_confirmed_orientation(subject, credential_options)
+            if credential_options:
+                subject.pending_slot = 'LICENCE_SPECIALTY'
+                subject.last_question_asked = "Quel intitulé exact figure sur ton diplôme ou ton attestation de licence ?"
+                if original_state.active_state.pending_slot in {'LICENCE_SPECIALTY', 'PROFILE_CONFIRMATION'}:
+                    if facts.target == 'ENGINEERING':
+                        answer = "D'accord, tu vises un cycle ingénieur. Pour vérifier les possibilités avec ta licence, donne-moi son intitulé complet : " + ", ".join(credential_options) + " ou une autre spécialité ?"
+                    elif facts.profile is AcademicProfile.LICENCE_HOLDER:
+                        answer = "D'accord, ta licence est validée. Il reste à préciser sa spécialité exacte : " + ", ".join(credential_options) + " ou un autre intitulé ?"
+                    elif facts.licence_specialty:
+                        answer = "Je comprends le domaine industriel. Pour l'admission, quelle spécialité précise as-tu suivie : " + ", ".join(credential_options) + " ou une autre ?"
+            subject.last_answer_text = answer
+            subject.last_intents = intents
             return self._finish(state, message, answer, intents, act, first_reply)
 
         structured_answer: str | None = None
@@ -392,16 +539,17 @@ class ChatOrchestrator:
             "CERTIFICATIONS",
             "INTERNATIONAL",
             "DURATION",
-            "DIFFICULTY",
+            "DIFFICULTY", "PRACTICE", "PROJECTS", "INTERNSHIPS",
             "ADMISSION",
         }
         if (
             target is None
             and not target_resolution.unavailable_label
             and target_specific_intents.intersection(intents)
+            and not requested_structured
         ):
             structured_answer = self.structured.missing_formation_for_details()
-        elif len(requested_structured) > 1:
+        elif len(set(intents).difference({"GENERAL", "DETAILS"})) > 1:
             blocks: list[str] = []
             all_licences = target is None and self._asks_all_licence_tariffs(message)
             if "CATALOG" in requested_structured:
@@ -429,6 +577,22 @@ class ChatOrchestrator:
                     target,
                     pre_registration_completed=subject.pre_registration_completed,
                 ))
+            if "PAYMENT" in intents and "FEES" not in intents:
+                blocks.append(await self.structured.fees(target))
+            if "ALTERNANCE" in intents:
+                blocks.append(await self.structured.alternance(target))
+            if target is not None and target_specific_intents.difference({"ADMISSION"}).intersection(intents):
+                blocks.append(await self._formation_details_for_turn(target, intents, state, message, include_all=facts.scope is ContextScope.ALL))
+            elif target is None and target_specific_intents.intersection(intents):
+                blocks.append(self.structured.missing_formation_for_details())
+            if "ADMISSION" in intents and target is not None:
+                blocks.append(await self.structured.admission(target, subject, eligibility))
+            if "ORIENTATION" in intents and recommendation is not None:
+                orientation = await self._all_eligible_paths(subject) if all_paths_requested else await self.structured.orientation(subject, recommendation)
+                if orientation:
+                    blocks.append(orientation)
+            if "PREINSCRIPTION" in intents and target is not None and not (eligibility and eligibility.status is EligibilityStatus.NOT_ELIGIBLE):
+                blocks.append(await self.structured.pre_registration(target))
             structured_answer = "\n\n".join(blocks)
         elif target_resolution.unavailable_label and not ({"LOCATION", "CONTACT"} & set(intents)):
             structured_answer = self.structured.unavailable_formation(
@@ -460,8 +624,16 @@ class ChatOrchestrator:
             structured_answer = await self.structured.location()
         elif "SCHEDULE" in intents:
             structured_answer = await self.structured.schedule()
+        elif "ALTERNANCE" in intents:
+            structured_answer = await self.structured.alternance(target)
+        elif "PAYMENT" in intents:
+            structured_answer = await self.structured.fees(target)
+        elif "ADMISSION" in intents and target is not None:
+            structured_answer = await self.structured.admission(target, subject, eligibility)
         elif "ORIENTATION" in intents and recommendation is not None:
             structured_answer = await self.structured.orientation(subject, recommendation)
+            if all_paths_requested:
+                structured_answer = await self._all_eligible_paths(subject)
         elif "PREINSCRIPTION" in intents and target is not None:
             structured_answer = await self.structured.pre_registration(target)
         elif target is not None and {
@@ -472,7 +644,7 @@ class ChatOrchestrator:
             "CERTIFICATIONS",
             "INTERNATIONAL",
             "DURATION",
-            "DIFFICULTY",
+            "DIFFICULTY", "PRACTICE", "PROJECTS", "INTERNSHIPS",
         }.intersection(intents):
             same_target = (
                 target.formation.code == subject.recommended_offer
@@ -488,14 +660,40 @@ class ChatOrchestrator:
             ):
                 structured_answer = await self.structured.next_detail_step(target)
             else:
-                structured_answer = await self.structured.formation_details(
+                structured_answer = await self._formation_details_for_turn(
                     target,
                     intents,
+                    state,
+                    message,
                     include_all=facts.scope is ContextScope.ALL,
                 )
 
         if structured_answer:
             answer = structured_answer
+            if eligibility and eligibility.status is EligibilityStatus.NOT_ELIGIBLE:
+                answer += (
+                    "\n\nRemarque : les critères publiés ne correspondent pas aux informations "
+                    "actuellement connues de ton profil. Cela ne bloque pas ta demande : "
+                    "l'administration IIT peut étudier ton dossier et te confirmer les possibilités."
+                )
+                answer = '\n'.join(line for line in answer.splitlines()
+                                   if not (line.startswith(('Veux-tu', 'Souhaites-tu'))
+                                           and 'pre inscription' in fold_text(line)))
+            if len(set(intents).difference({"GENERAL", "DETAILS"})) > 1:
+                answer = self._single_followup(answer)
+            if qualification_question:
+                answer = self._single_followup(answer, keep_last=False) + "\n" + qualification_question
+            elif not {"ORIENTATION", "PREINSCRIPTION"}.intersection(intents) and state.turn_count - subject.last_recommendation_turn < 3 and subject.last_answer_text:
+                answer = self._single_followup(answer, keep_last=False)
+            registration_followup = any(
+                line.startswith(("Veux-tu", "Souhaites-tu")) and "pre inscription" in fold_text(line)
+                for line in answer.splitlines()
+            )
+            if registration_followup and "PREINSCRIPTION" not in intents:
+                if subject.last_cta_turn > 0 and state.turn_count - subject.last_cta_turn < 3:
+                    answer = self._single_followup(answer, keep_last=False)
+                else:
+                    subject.last_cta_turn = state.turn_count
             if recommendation and recommendation.primary:
                 subject.recommended_offer = recommendation.primary.formation_code
                 subject.recommended_specialisation = recommendation.primary.specialisation_code
@@ -512,7 +710,7 @@ class ChatOrchestrator:
                 "CERTIFICATIONS",
                 "INTERNATIONAL",
                 "DURATION",
-                "DIFFICULTY",
+                "DIFFICULTY", "PRACTICE", "PROJECTS", "INTERNSHIPS", "ADMISSION", "FEES",
             }.intersection(intents):
                 subject.recommended_offer = target.formation.code
                 subject.recommended_specialisation = (
@@ -522,7 +720,7 @@ class ChatOrchestrator:
             subject.pending_action = self._next_pending_action(
                 intents,
                 target=target,
-            )
+            ) if any(line.startswith(("Veux-tu", "Souhaites-tu")) for line in answer.splitlines()) else None
             subject.last_intents = intents
             subject.last_scope = facts.scope.value
             subject.last_dialogue_act = act.value
@@ -583,7 +781,13 @@ class ChatOrchestrator:
         rag_result = await self.rag.retrieve(plan)
         log_stage("RAG_RESULT", session_id=session_id, chunks=len(rag_result.chunks))
 
-        if eligibility and eligibility.status is EligibilityStatus.NOT_ELIGIBLE:
+        if (
+            eligibility
+            and eligibility.status is EligibilityStatus.NOT_ELIGIBLE
+            and target is None
+        ):
+            # Eligibility is normally evaluated only with a concrete target.
+            # Keep the fallback as a defensive path if that invariant changes.
             answer = self.fallback.build(intents, rag_result.facts, recommendation, eligibility)
         else:
             mode = response_mode(intents, act)
@@ -639,6 +843,16 @@ class ChatOrchestrator:
                 eligibility_status=eligibility.status if eligibility else None,
             )
             answer = self.length_guard.apply(answer, mode)
+            if (
+                eligibility
+                and eligibility.status is EligibilityStatus.NOT_ELIGIBLE
+                and "Remarque :" not in answer
+            ):
+                answer += (
+                    "\n\nRemarque : les critères publiés ne correspondent pas aux informations "
+                    "actuellement connues de ton profil. Cela ne bloque pas ta demande : "
+                    "l'administration IIT peut étudier ton dossier et te confirmer les possibilités."
+                )
 
         if recommendation and recommendation.primary:
             subject.recommended_offer = recommendation.primary.formation_code
@@ -663,6 +877,59 @@ class ChatOrchestrator:
             eligibility=eligibility,
             recommendation=recommendation,
         )
+
+    @staticmethod
+    def _refuse_inappropriate(state: ConversationState, original: ConversationState) -> DialogueResponse:
+        for field in ConversationState.model_fields:
+            setattr(state, field, getattr(original, field))
+        return DialogueResponse(TurnGate().response(TurnType.INAPPROPRIATE, first_reply=False), state)
+
+    async def _formation_details_for_turn(self, target, intents, state, message, *, include_all=False):
+        subject = state.active_state
+        continuing = (
+            subject.recommended_offer == target.formation.code
+            and subject.recommended_specialisation == (target.specialisation.code if target.specialisation else None)
+            and bool(state.history)
+        )
+        source = FORMATION_LINKS.get(target.formation.code, "https://iit.tn/formation/")
+        source_seen = any(source in item.content for item in state.history if item.role == "assistant")
+        source_requested = bool({"lien", "source", "sources", "site", "page"}.intersection(fold_text(message).split()))
+        return await self.structured.formation_details(
+            target, intents, include_all=include_all, continuing=continuing,
+            show_source=source_requested or not continuing or not source_seen,
+            show_specialisations=not continuing or self._asks_specialisation_list(message),
+        )
+
+    @staticmethod
+    def _asks_all_paths(message: str) -> bool:
+        text = fold_text(message)
+        return bool(re.search(r"\b(?:tous|toutes|tout|kol|koll)\b", text) and re.search(r"\b(?:parcours|formations|voies|filieres)\b", text))
+
+    async def _all_eligible_paths(self, subject: SubjectState) -> str:
+        from app.repositories.academic import PageRequest
+        formations = (await self.catalogue.formations.list(PageRequest(page_size=100))).items
+        confirmed, uncertain = [], []
+        for formation in formations:
+            if subject.profile is AcademicProfile.NEW_BAC and formation.code.startswith("INGENIEUR_"):
+                continue
+            decision = await self.eligibility_service.evaluate(subject, formation)
+            label = formation.nom + (f" — {formation.duree_annees} ans" if formation.duree_annees else "")
+            if decision.status is EligibilityStatus.ELIGIBLE:
+                confirmed.append("• " + label)
+            elif decision.status is EligibilityStatus.UNKNOWN:
+                uncertain.append("• " + label)
+        blocks = ["Voici les parcours compatibles avec les critères actuellement connus de ton profil :", *confirmed] if confirmed else ["Aucun parcours n'est confirmé avec les informations actuellement disponibles."]
+        if uncertain:
+            blocks.extend(["À vérifier séparément avec l'IIT, faute d'informations suffisantes :", *uncertain])
+        blocks.append("La compatibilité avec les critères ne garantit pas l'admission finale. Quel parcours veux-tu comparer ou approfondir ?")
+        return "\n".join(blocks)
+
+    @staticmethod
+    def _single_followup(answer: str, *, keep_last: bool = True) -> str:
+        lines = answer.splitlines()
+        questions = [i for i, line in enumerate(lines) if line.startswith(("Veux-tu", "Souhaites-tu", "Dis-moi", "Laquelle", "Parmi ces"))]
+        removed = set(questions[:-1] if keep_last else questions)
+        return "\n".join(line for i, line in enumerate(lines) if i not in removed).strip()
 
     @staticmethod
     def _next_pending_action(
@@ -693,6 +960,18 @@ class ChatOrchestrator:
     ) -> DialogueResponse:
         state.turn_count += 1
         answer = self.turn_gate.response(turn_type, first_reply=first_reply)
+        if turn_type is TurnType.CLARIFICATION:
+            subject = state.active_state
+            if subject.pending_slot == 'LICENCE_SPECIALTY':
+                answer = ("Les conditions d'accès dépendent de la spécialité exacte de ta licence. "
+                          "Il faut l'intitulé complet pour comparer ton diplôme aux conditions publiées, sans supposer une équivalence. "
+                          "Quel intitulé complet figure sur ton diplôme ou ton attestation ?")
+            elif subject.pending_slot and subject.last_question_asked:
+                answer = "Pour continuer, il me manque cette précision : " + subject.last_question_asked
+            elif not state.history:
+                answer = "Je n'ai pas compris ce message. Tu peux écrire ta question sur les études ou les formations de l'IIT ?"
+            elif subject.last_answer_text:
+                answer = "Quel élément de ma réponse veux-tu que je précise ? Tu peux le citer, même en quelques mots."
         state.history.extend((ChatMessage(role="user", content=message), ChatMessage(role="assistant", content=answer)))
         state.touch()
         return DialogueResponse(answer, state)

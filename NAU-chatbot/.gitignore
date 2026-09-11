@@ -1,6 +1,7 @@
 .env
 .venv/
 .inference-venv/
+.speech-venv/
 .runtime/
 **/__pycache__/
 **/*.py[cod]
@@ -12,16 +13,6 @@
 frontend/node_modules/
 frontend/dist/
 backups/
-models/
-!backend/app/models/
-backend/app/models/*
-!backend/app/models/schemas/
-backend/app/models/schemas/*
-!backend/app/models/schemas/auth.py
-!backend/app/models/schemas/conversation.py
-!backend/app/models/sqlalchemy/
-backend/app/models/sqlalchemy/*
-!backend/app/models/sqlalchemy/__init__.py
-!backend/app/models/sqlalchemy/identity.py
+/models/
 *.log
 *.sqlite*

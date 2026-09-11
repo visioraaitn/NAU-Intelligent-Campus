@@ -60,6 +60,7 @@ class SubjectState(BaseModel):
 
     profile: AcademicProfile = AcademicProfile.UNKNOWN
     licence_specialty: str | None = None
+    licence_year: int | None = Field(default=None, ge=1, le=3)
     bac_specialty: str | None = None
     bac_average: float | None = Field(default=None, ge=0, le=20)
     math_comfort: str | None = None

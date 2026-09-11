@@ -1,0 +1,303 @@
+[
+  {
+    "name": "combined_profile_and_questions",
+    "turns": [
+      {
+        "message": "j'ai une licence en maintenance industrielle, est-ce que je peux intégrer le génie industriel et quels sont les frais ?",
+        "intents": [
+          "FEES",
+          "ADMISSION"
+        ],
+        "specialty": "MAINTENANCE_INDUSTRIELLE",
+        "contains": [
+          "mensualités"
+        ]
+      },
+      {
+        "message": "je veux devenir ingénieur, programme et frais du génie industriel ?",
+        "intents": [
+          "PROGRAMME",
+          "FEES"
+        ],
+        "contains": [
+          "Automatisation",
+          "mensualités"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "degree_in_progress",
+    "turns": [
+      {
+        "message": "je suis en licence maintenance industrielle",
+        "profile": "LICENCE_STUDENT",
+        "contains": [
+          "valid"
+        ],
+        "excludes": [
+          "formations admissibles"
+        ]
+      },
+      {
+        "message": "programme et stages génie industriel",
+        "intents": [
+          "PROGRAMME",
+          "INTERNSHIPS"
+        ],
+        "contains": [
+          "Automatisation"
+        ]
+      },
+      {
+        "message": "j'ai validé ma licence",
+        "profile": "LICENCE_HOLDER",
+        "specialty": "MAINTENANCE_INDUSTRIELLE"
+      }
+    ]
+  },
+  {
+    "name": "credential_correction",
+    "turns": [
+      {
+        "message": "j'ai une licence en maintenance industrielle",
+        "specialty": "MAINTENANCE_INDUSTRIELLE",
+        "target": "INGENIEUR_INDUSTRIEL"
+      },
+      {
+        "message": "non, pas maintenance industrielle, logistique industrielle",
+        "specialty": "LOGISTIQUE_INDUSTRIELLE"
+      },
+      {
+        "message": "admission génie industriel",
+        "intents": [
+          "ADMISSION"
+        ],
+        "excludes": [
+          "ne correspondent pas"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "historical_bac_question",
+    "turns": [
+      {
+        "message": "j'ai une licence en informatique",
+        "profile": "LICENCE_HOLDER"
+      },
+      {
+        "message": "tarifs pour un bac math ?",
+        "intents": [
+          "FEES"
+        ],
+        "profile": "LICENCE_HOLDER",
+        "excludes": [
+          "correction de ton niveau"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "separate_people",
+    "turns": [
+      {
+        "message": "j'ai une licence en informatique",
+        "profile": "LICENCE_HOLDER",
+        "subject": "SELF"
+      },
+      {
+        "message": "mon ami a un bac math, quelles formations pour lui ?",
+        "subject": "FRIEND",
+        "profile": "NEW_BAC"
+      },
+      {
+        "message": "et pour moi, les stages ?",
+        "subject": "SELF",
+        "profile": "LICENCE_HOLDER",
+        "intents": [
+          "INTERNSHIPS"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "qualification_interrupted",
+    "turns": [
+      {
+        "message": "nhebek tensahni",
+        "contains": [
+          "où tu en es"
+        ]
+      },
+      {
+        "message": "aychek",
+        "contains": [
+          "Avec plaisir"
+        ]
+      },
+      {
+        "message": "bac math",
+        "profile": "NEW_BAC",
+        "contains": [
+          "Licence"
+        ]
+      },
+      {
+        "message": "les frais, les stages et les projets de licence informatique",
+        "intents": [
+          "FEES",
+          "INTERNSHIPS",
+          "PROJECTS"
+        ],
+        "contains": [
+          "mensualités",
+          "Projet Tutoré",
+          "Stage international"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "social_and_moderation",
+    "turns": [
+      {
+        "message": "programme architecture",
+        "contains": [
+          "BIM"
+        ],
+        "no_llm": true
+      },
+      {
+        "message": "mrigelll",
+        "contains": [
+          "D'accord"
+        ]
+      },
+      {
+        "message": "yefta7 alik",
+        "contains": [
+          "Avec plaisir"
+        ]
+      },
+      {
+        "message": "barra neyk w les tarifs",
+        "contains": [
+          "respectueux"
+        ],
+        "no_llm": true
+      },
+      {
+        "message": "durée ?",
+        "contains": [
+          "6 ans"
+        ],
+        "target": "ARCHITECTURE_DNA",
+        "no_llm": true
+      }
+    ]
+  },
+  {
+    "name": "unsupported_promises",
+    "turns": [
+      {
+        "message": "programme licence informatique",
+        "contains": [
+          "Applications Web"
+        ]
+      },
+      {
+        "message": "est-ce que l'emploi est garanti ?",
+        "contains": [
+          "ne garantit pas"
+        ]
+      },
+      {
+        "message": "certification AWS garantie ?",
+        "contains": [
+          "n'est pas automatique"
+        ]
+      },
+      {
+        "message": "alternance et cours du soir ?",
+        "intents": [
+          "ALTERNANCE",
+          "SCHEDULE"
+        ],
+        "contains": [
+          "confirmer"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "profile_correction_and_selection",
+    "turns": [
+      {
+        "message": "ena licence indus",
+        "contains": [
+          "intitulé exact"
+        ]
+      },
+      {
+        "message": "indus c'est industrielle",
+        "specialty": "INDUSTRIELLE",
+        "contains": [
+          "spécialité précise"
+        ]
+      },
+      {
+        "message": "Cycle Ingénieur — Génie Industriel — 3 ans",
+        "contains": [
+          "Automatisation"
+        ],
+        "excludes": [
+          "Catalogue officiel"
+        ],
+        "no_llm": true
+      },
+      {
+        "message": "en fait je suis bac math",
+        "profile": "NEW_BAC",
+        "specialty": null
+      },
+      {
+        "message": "programme architecture et les stages",
+        "intents": [
+          "PROGRAMME",
+          "INTERNSHIPS"
+        ],
+        "contains": [
+          "BIM",
+          "Stage international"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "requested_formation_is_not_owned_diploma",
+    "turns": [
+      {
+        "message": "j'ai une licence en maintenance industrielle",
+        "specialty": "MAINTENANCE_INDUSTRIELLE",
+        "profile": "LICENCE_HOLDER"
+      },
+      {
+        "message": "programme licence informatique",
+        "specialty": "MAINTENANCE_INDUSTRIELLE",
+        "profile": "LICENCE_HOLDER",
+        "intents": [
+          "PROGRAMME"
+        ],
+        "target": "LICENCE_INFO"
+      },
+      {
+        "message": "admission génie industriel",
+        "specialty": "MAINTENANCE_INDUSTRIELLE",
+        "excludes": [
+          "ne remplit pas"
+        ]
+      }
+    ]
+  }
+]

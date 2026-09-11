@@ -26,3 +26,8 @@ class ContextualModifierDetector:
             ):
                 return scope
         return ContextScope.CURRENT
+
+    def is_elliptical_expansion(self, message: str) -> bool:
+        """Only a standalone scope expression may inherit the previous topic."""
+        text = fold_text(message).strip(" .!?،؟")
+        return any(text == fold_text(term) for term in self.terms.get("all", []))

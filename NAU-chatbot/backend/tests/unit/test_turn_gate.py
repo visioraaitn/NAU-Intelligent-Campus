@@ -259,7 +259,7 @@ def test_generic_tunisian_weather_questions_are_out_of_scope(message: str) -> No
 
 @pytest.mark.parametrize(
     "message",
-    ["genie info", "genie indus", "licence genie logiciel"],
+    ["genie info", "genie indus", "licence genie logiciel", "geniee infoo", "henie infoo"],
 )
 def test_common_formation_abbreviations_are_academic(message: str) -> None:
     assert TurnGate().classify(message) is TurnType.ACADEMIC
@@ -494,6 +494,31 @@ async def test_misspelled_software_choice_resolves_conservatively(repository_fac
     assert target is not None
     assert target.formation.code == "LICENCE_INFO"
     assert target.specialisation is specialisation
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("message", "expected_code"),
+    [("geniee infoo", "INGENIEUR_INFO"), ("henie indus", "INGENIEUR_INDUSTRIEL")],
+)
+async def test_typo_tolerant_formation_aliases_resolve_dynamically(
+    message: str,
+    expected_code: str,
+    repository_factory,
+) -> None:
+    formation_items = [
+        SimpleNamespace(id=1, code="INGENIEUR_INFO", nom="Génie Informatique"),
+        SimpleNamespace(id=2, code="INGENIEUR_INDUSTRIEL", nom="Génie Industriel"),
+    ]
+
+    class Catalogue:
+        formations = repository_factory(formation_items)
+        specialisations = repository_factory()
+
+    target = await AcademicTargetResolver(Catalogue()).resolve(message)
+
+    assert target is not None
+    assert target.formation.code == expected_code
 
 
 @pytest.mark.asyncio

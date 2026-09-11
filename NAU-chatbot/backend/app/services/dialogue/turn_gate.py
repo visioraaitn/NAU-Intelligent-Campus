@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 import re
+import unicodedata
 from difflib import SequenceMatcher
 from enum import Enum
+from itertools import groupby
 
 from app.core.file_config import pattern_file, security_file_config
-from app.services.dialogue.normalizer import contains_phrase, fold_text
+from app.services.dialogue.normalizer import contains_phrase, fold_text, normalize_degree_spelling
 
 
 class TurnType(str, Enum):
@@ -18,6 +20,9 @@ class TurnType(str, Enum):
     THANKS = "THANKS"
     GOODBYE = "GOODBYE"
     SMALL_TALK = "SMALL_TALK"
+    ACKNOWLEDGEMENT = "ACKNOWLEDGEMENT"
+    CLARIFICATION = "CLARIFICATION"
+    IDENTITY = "IDENTITY"
     OUT_OF_SCOPE = "OUT_OF_SCOPE"
     ACADEMIC = "ACADEMIC"
 
@@ -31,6 +36,9 @@ FIXED_RESPONSES = {
     TurnType.THANKS: "Avec plaisir 🙂 N'hésite pas si tu veux approfondir une formation.",
     TurnType.GOODBYE: "À bientôt 🙂 Bon courage pour ton orientation !",
     TurnType.SMALL_TALK: "Salut 🙂 Je suis là pour t'aider à explorer les formations et ton orientation à l'IIT.",
+    TurnType.ACKNOWLEDGEMENT: "D'accord 🙂 On peut continuer quand tu veux : quelle information souhaites-tu approfondir ?",
+    TurnType.CLARIFICATION: "Tu veux que je précise ou reformule un point ? Dis-moi lequel et je reprends l'explication.",
+    TurnType.IDENTITY: "Je suis l'assistant virtuel de l'IIT. Je peux t'aider à comparer les formations, comprendre leurs programmes et préparer ton orientation ou ton admission.",
     TurnType.OUT_OF_SCOPE: "Je peux aider uniquement pour les formations, l'orientation, l'admission, les modules, les frais et les informations officielles de l'IIT.",
     TurnType.RESET: "D'accord, on repart de zéro. Qu'est-ce que tu aimerais savoir ?",
 }
@@ -44,7 +52,7 @@ class TurnGate:
         r"\b(?:iit|bac(?:calaureat)?|licen[cs]e|mastere?|prepa|preparatoire|"
         r"formations?|specialites?|filieres?|parcours|genie|ingenieur|architecture|"
         r"matieres?|modules?|diplome|admission|admissible|pre[ -]?inscri\w*|"
-        r"mensualite|tarif|b?9add?e(?:h|ch)|accredit\w*|certification|campus|"
+        r"mensualites?|tarifs?|b?9add?e(?:h|ch)|accredit\w*|certifications?|certifs?|campus|"
         r"mo3taraf|mo3taref|ma3tref|ma3rouf|معترف|"
         r"cours?\s+(?:du|de)?\s*soir[e]?|"
         r"(?:na9ra|n9ra|nakra|nkra)\s+(?:b|bel|fi|fel)\s*(?:el\s*)?lil|"
@@ -76,6 +84,12 @@ class TurnGate:
             re.compile(item, re.IGNORECASE)
             for item in pattern_file("insults").patterns.get("inappropriate", [])
         ]
+        self.insult_vocabulary = tuple(pattern_file("insults").terms.get("vocabulary", []))
+        self.insult_phonetics = {
+            self._consonants(self._compact_lexeme(word))
+            for word in pattern_file("insults").terms.get("phonetic_vocabulary", [])
+            if len(self._consonants(self._compact_lexeme(word))) >= 3
+        }
         self.security = [
             re.compile(item, re.IGNORECASE)
             for item in pattern_file("security").patterns.get("injection", [])
@@ -93,10 +107,21 @@ class TurnGate:
             return TurnType.RESET
         if any(pattern.search(folded) for pattern in self.security):
             return TurnType.SECURITY
-        if any(pattern.search(folded) for pattern in self.insults):
+        if any(pattern.search(folded) for pattern in self.insults) or self._similar_insult(folded) or self._similar_insult(self._unmask_insults(raw)):
             return TurnType.INAPPROPRIATE
         if self._has_intent("OUT_OF_SCOPE", folded):
             return TurnType.OUT_OF_SCOPE
+        if len(folded) >= 3 and len(set(folded)) == 1:
+            return TurnType.CLARIFICATION
+        if normalize_degree_spelling(raw) != folded:
+            return TurnType.ACADEMIC
+        if self.has_strong_academic_signal(raw):
+            return TurnType.ACADEMIC
+        if re.fullmatch(r"w(?:i|e)n(?:e?k|ik)?\s+cv", folded):
+            return TurnType.HOW_ARE_YOU
+        # A short academic word (e.g. "tarifs") must not fuzzy-match "salut".
+        if self._has_academic_intent(folded):
+            return TurnType.ACADEMIC
         fuzzy_social = self._fuzzy_social_type(folded)
         if fuzzy_social is not None:
             return fuzzy_social
@@ -118,6 +143,54 @@ class TurnGate:
         if len(words) <= 2 and words and not words.intersection(self.hints):
             return TurnType.SMALL_TALK
         return TurnType.ACADEMIC
+
+    @staticmethod
+    def _compact_lexeme(word: str) -> str:
+        return "".join(char for char, _ in groupby(word.translate(str.maketrans({'3': 'a', '7': 'h', '9': 'q'}))))
+
+    @staticmethod
+    def _consonants(word: str) -> str:
+        return word.translate(str.maketrans('', '', 'aeiou'))
+
+    @staticmethod
+    def _unmask_insults(message: str) -> str:
+        # This view is used only for moderation; preserve the original message
+        # for academic interpretation and profile extraction.
+        visible = ''.join(char for char in unicodedata.normalize('NFKC', message)
+                          if unicodedata.category(char) != 'Cf')
+        visible = re.sub(r'(?<=\w)[^\w\s]+(?=\w)', '', visible)
+        return fold_text(visible)
+
+    def _similar_insult(self, value: str) -> bool:
+        """Catch repetition, masking and reviewed phonetic spelling variants."""
+        candidates = tuple(self._compact_lexeme(word) for word in self.insult_vocabulary)
+        words = value.split()
+        # Letter-by-letter spelling must not evade the same lexeme check.
+        # Never concatenate ordinary words or an entire sentence.
+        spelled_words = []
+        for single_letters, run in groupby(words, key=lambda word: len(word) == 1 and word.isalpha()):
+            letters = list(run)
+            if single_letters and 3 <= len(letters) <= 16:
+                spelled_words.append(''.join(letters))
+        for word in words + spelled_words:
+            token = self._compact_lexeme(word)
+            if 3 <= len(token) <= 8 and self._consonants(token) in self.insult_phonetics:
+                return True
+            for candidate in candidates:
+                if token == candidate:
+                    return True
+                if token.endswith(candidate) and token[:-len(candidate)] in {"a", "ae", "al", "ال"}:
+                    return True
+                forms = [token]
+                if token.startswith("el"):
+                    forms.append(token[2:])
+                elif token.startswith("e"):
+                    forms.append(token[1:])
+                if candidate in forms:
+                    return True
+                if len(candidate) >= 5 and abs(len(token) - len(candidate)) <= 2 and SequenceMatcher(None, token, candidate).ratio() >= .86:
+                    return True
+        return False
 
     def _has_academic_intent(self, value: str) -> bool:
         patterns = pattern_file("intents").patterns
@@ -146,7 +219,18 @@ class TurnGate:
         question into an academic request.
         """
 
-        return bool(self.STRONG_ACADEMIC_SIGNAL.search(fold_text(value)))
+        folded = fold_text(value)
+        if self.STRONG_ACADEMIC_SIGNAL.search(folded):
+            return True
+        academic_words = (
+            "genie", "ingenieur", "informatique", "industriel", "licence",
+            "specialite",
+        )
+        return any(
+            len(token) >= 4
+            and max(SequenceMatcher(None, token, word).ratio() for word in academic_words) >= .78
+            for token in folded.split()
+        )
 
     def _fuzzy_social_type(self, value: str) -> TurnType | None:
         if len(value) > 32 or not value.isascii():
@@ -157,9 +241,13 @@ class TurnGate:
         }
         if re.fullmatch(r"w(?:i|e)n(?:e?k|ik)?\s+cv", value):
             return TurnType.HOW_ARE_YOU
+        # Repeated keystrokes carry little information in short social text.
+        # Compare normalized spellings dynamically instead of listing variants.
+        compact = "".join(character for character, _ in groupby(value))
         for kind, words in candidates.items():
             if any(
-                SequenceMatcher(None, value, word).ratio() >= 0.8
+                max(SequenceMatcher(None, value, word).ratio(),
+                    SequenceMatcher(None, compact, "".join(c for c, _ in groupby(word))).ratio()) >= 0.8
                 for word in words
             ):
                 return kind

@@ -1,4 +1,3 @@
-import { forwardRef } from "react";
 import { Icon } from "../../components/Icon";
 import type { ChatMessage as ChatMessageType } from "../../types/chat";
 import { formatDateTime } from "../../utils/format";
@@ -35,18 +34,12 @@ export function ChatWelcome({ suggestions, disabled, onSelect }: ChatWelcomeProp
 
 interface ChatMessageProps {
   message: ChatMessageType;
-  latestAssistantMessage: boolean;
 }
 
-export const ChatMessage = forwardRef<HTMLElement, ChatMessageProps>(function ChatMessage(
-  { message, latestAssistantMessage },
-  ref,
-) {
+export function ChatMessage({ message }: ChatMessageProps) {
   return (
     <article
-      ref={ref}
       className={`message message--${message.role} ${message.delivery === "failed" ? "message--failed" : ""}`}
-      tabIndex={latestAssistantMessage ? -1 : undefined}
       aria-label={message.role === "assistant" ? "Réponse de l’assistant" : "Votre message"}
     >
       {message.role === "assistant" && (
@@ -61,7 +54,7 @@ export const ChatMessage = forwardRef<HTMLElement, ChatMessageProps>(function Ch
       </div>
     </article>
   );
-});
+}
 
 export function ChatLoadingMessage() {
   return (

@@ -3,6 +3,7 @@ set -euo pipefail
 
 ROOT_DIR=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)
 cd "$ROOT_DIR"
+export PATH="$ROOT_DIR/.runtime/node/bin:$ROOT_DIR/.runtime/bin:$PATH"
 
 env_value() {
   local value
@@ -14,6 +15,7 @@ env_value() {
 
 POSTGRES_PASSWORD=$(env_value POSTGRES_PASSWORD)
 REDIS_PASSWORD=$(env_value REDIS_PASSWORD)
+HF_HOME=$(env_value HF_HOME)
 POSTGRES_BIN="$ROOT_DIR/.runtime/postgres/usr/lib/postgresql/16/bin"
 POSTGRES_DATA="$ROOT_DIR/.runtime/data/postgres"
 REDIS_BIN="$ROOT_DIR/.runtime/redis/usr/bin"
@@ -42,7 +44,7 @@ start_session() {
   local directory=$2
   local command=$3
   if ! tmux has-session -t "$name" 2>/dev/null; then
-    tmux new-session -d -s "$name" -c "$directory" "$command"
+    tmux new-session -d -s "$name" -c "$directory" -e "PATH=$PATH" -e "HF_HOME=$HF_HOME" "$command"
   fi
 }
 
@@ -51,6 +53,6 @@ start_session nau-inference "$ROOT_DIR" "exec env PYTHONPATH=backend HF_HUB_OFFL
 start_session nau-speech "$ROOT_DIR" "exec env PYTHONPATH=backend HF_HUB_OFFLINE=1 TRANSFORMERS_OFFLINE=1 LD_LIBRARY_PATH='$SPEECH_TORCH_LIB:$SPEECH_FFMPEG_LIB' backend/.speech-venv/bin/uvicorn app.infrastructure.inference.speech_server:app --host 127.0.0.1 --port 8011 --workers 1 --no-access-log >> '$ROOT_DIR/.runtime/logs/speech.log' 2>&1"
 start_session nau-worker "$ROOT_DIR" "exec env PYTHONPATH=backend ANONYMIZED_TELEMETRY=FALSE backend/.venv/bin/python -m app.workers.rag_worker >> '$ROOT_DIR/.runtime/logs/worker.log' 2>&1"
 start_session nau-backend "$ROOT_DIR" "exec env PYTHONPATH=backend ANONYMIZED_TELEMETRY=FALSE backend/.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8000 >> '$ROOT_DIR/.runtime/logs/backend.log' 2>&1"
-start_session nau-frontend "$ROOT_DIR/frontend" "exec npm run preview -- --host 0.0.0.0 --port 5173 >> '$ROOT_DIR/.runtime/logs/frontend.log' 2>&1"
+start_session nau-frontend "$ROOT_DIR/frontend" "exec npm run preview -- --host 0.0.0.0 --port 8080 --strictPort >> '$ROOT_DIR/.runtime/logs/frontend.log' 2>&1"
 
 printf 'Services lancés. Vérifiez avec: scripts/local-status.sh\n'

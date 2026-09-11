@@ -1,11 +1,14 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Sequence
 from decimal import Decimal
+from urllib.parse import parse_qsl, urlencode, urlsplit, urlunsplit
 
 from app.domain.academic.enums import FormationElementType
 from app.domain.conversation.models import AcademicProfile, SubjectState
 from app.domain.recommendation.schemas import (
+    EligibilityStatus,
     RecommendationDecision,
     RecommendationOption,
 )
@@ -58,6 +61,8 @@ class StructuredResponseBuilder:
                 for item in formations
                 if "INFO" in item.code or "informatique" in fold_text(item.nom)
             ]
+        if re.search(r"\blicences?\b", text):
+            formations = [item for item in formations if item.code.startswith("LICENCE_")]
 
         lines = [
             "Voici les formations IIT actuellement enregistrées"
@@ -85,7 +90,7 @@ class StructuredResponseBuilder:
                 lines.append(
                     "  Spécialisations : " + ", ".join(item.nom for item in specs)
                 )
-            lines.append(f"  Page officielle : {FORMATION_LINKS.get(formation.code, 'https://iit.tn/formation/')}")
+        lines.append("\nCatalogue officiel : https://iit.tn/formation/")
         lines.append(
             "Dis-moi ton niveau actuel et ta section ou spécialité, et je te montrerai uniquement les formations compatibles avec ton profil."
         )
@@ -353,6 +358,112 @@ class StructuredResponseBuilder:
                 lines.append(
                     f"Avec ton bac {bac}, je te recommande d'abord les licences IIT admissibles. Une première piste à explorer est {formation.nom}."
                 )
+            lines.append(
+                "Si les conditions de la Prépa correspondent à ton bac, c'est aussi une voie possible vers le cycle ingénieur; "
+                "je peux comparer les deux parcours selon ton objectif."
+            )
+        elif (
+            subject.profile is AcademicProfile.LICENCE_STUDENT
+            and subject.target == "LICENCE"
+        ):
+            level = subject.licence_year
+            has_interest = any(
+                interest != "GENERAL_INFO" for interest in subject.interests
+            )
+            if level == 1:
+                level_guidance = (
+                    "Comme tu es en première année, la poursuite normale est de candidater en première année "
+                    "de la licence correspondante."
+                )
+            elif level in {2, 3}:
+                level_guidance = (
+                    f"Comme tu es en {level}e année, contacte l'admission IIT avec tes relevés et le programme "
+                    f"suivi : elle étudiera la possibilité de te faire poursuivre au niveau correspondant, "
+                    "sans garantir automatiquement une entrée directe."
+                )
+            else:
+                level_guidance = (
+                    "Pour déterminer l'année de reprise ou de poursuite, l'admission doit vérifier ton niveau, "
+                    "tes relevés et le contenu des matières déjà validées."
+                )
+            lines.append(
+                f"Tu veux continuer tes études à l'IIT : la piste proposée est {formation.nom}. "
+                "Comme ta licence est encore en cours, l'admission vérifiera ton niveau et les équivalences. "
+                + level_guidance
+            )
+            missing_profile = []
+            if not subject.licence_specialty:
+                missing_profile.append("ta spécialité de licence")
+            if not subject.bac_specialty:
+                missing_profile.append("ta section de bac")
+            if missing_profile:
+                lines.append(
+                    "Pour personnaliser cette orientation, il me manque "
+                    + " et ".join(missing_profile)
+                    + "."
+                )
+            lines.append(
+                "Si ton objectif est plutôt le cycle ingénieur, ta licence devra d'abord être validée. "
+                "Après validation, l'admission pourra étudier ton dossier et comparer ta spécialité avec les cycles "
+                "Génie Informatique, Génie Industriel, Génie Mécanique ou Génie des Procédés; ce n'est pas une admission automatique."
+            )
+        elif subject.profile is AcademicProfile.LICENCE_STUDENT:
+            lines.append(
+                f"Tu peux viser le cycle ingénieur {formation.nom} si ta licence est dans un domaine compatible "
+                "et si elle est validée. Si tu n'as pas encore validé ta licence, tu peux aussi poursuivre ou reprendre "
+                "le parcours correspondant à l'IIT."
+            )
+            if subject.licence_year:
+                lines.append(
+                    f"Tu es actuellement en {subject.licence_year}e année de licence : termine et valide ce niveau "
+                    "avant l'intégration ingénieur, puis fais étudier ton dossier par l'admission."
+                )
+            else:
+                lines.append(
+                    "Comme tu dis seulement être en licence, précise si elle est en cours ou déjà validée "
+                    "ainsi que ton niveau (L1, L2 ou L3)."
+                )
+            lines.append(
+                "Ta licence ne doit pas forcément être proposée par l'IIT : nous regardons la correspondance "
+                "entre ta spécialité et le cycle ingénieur visé."
+            )
+            if primary.eligibility.status is EligibilityStatus.UNKNOWN:
+                lines.append(
+                    f"{formation.nom} est une piste à examiner; l'admission reste à confirmer : "
+                    "le diplôme en cours doit être validé avant de conclure."
+                )
+            lines.append(
+                "Si tu es déjà en deuxième année, contacte l'admission IIT avec tes relevés : l'équipe pourra étudier "
+                "une éventuelle entrée en deuxième année, sans te faire recommencer automatiquement en première année."
+            )
+        elif subject.profile is AcademicProfile.LICENCE_HOLDER:
+            lines.append(
+                f"Avec une licence en {subject.licence_specialty.replace('_', ' ').title() if subject.licence_specialty else 'domaine compatible'}, "
+                f"tu peux candidater au cycle ingénieur {formation.nom}, sous réserve de l'étude du dossier."
+            )
+            lines.append(
+                "La licence n'a pas besoin d'être un parcours proposé par l'IIT : l'admission étudie la "
+                "correspondance de ton domaine avec le cycle ingénieur demandé."
+            )
+            lines.append(
+                "Prépare le diplôme ou l'attestation de licence, les relevés de notes et, si le diplôme vient d'un établissement privé, "
+                "le document d'équivalence ou de reconnaissance demandé. L'admission IIT pourra confirmer les pièces exactes."
+            )
+        elif subject.profile is AcademicProfile.PREPA_HOLDER:
+            lines.append(
+                f"Comme tu as validé la Prépa, la suite logique est le cycle ingénieur {formation.nom}."
+            )
+        elif subject.profile is AcademicProfile.PREPA_STUDENT:
+            lines.append(
+                f"Si ta Prépa n'est pas encore validée, l'accès au cycle ingénieur {formation.nom} doit attendre la validation. "
+                "Tu peux discuter avec l'admission IIT d'une poursuite ou d'un complément du cycle préparatoire à l'IIT."
+            )
+        elif primary.eligibility.status is EligibilityStatus.UNKNOWN:
+            lines.append(f"Avec ton parcours actuel, {formation.nom} est une piste à examiner.")
+            if subject.profile in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.PREPA_STUDENT}:
+                lines.append("L'admission reste à confirmer : ton diplôme en cours doit être validé avant de conclure.")
+            else:
+                lines.append("L'admission reste à confirmer à partir des informations manquantes sur ton parcours.")
         else:
             lines.append(
                 f"Avec ton parcours actuel, la voie IIT la plus cohérente est {formation.nom}."
@@ -363,7 +474,11 @@ class StructuredResponseBuilder:
         if formation.intitule_diplome and formation.code != "PREPA_GENERAL":
             lines.append(f"Diplôme préparé : {formation.intitule_diplome}.")
 
-        if primary.specialisation_name:
+        show_specialisation = bool(
+            primary.specialisation_name
+            and any(interest != "GENERAL_INFO" for interest in subject.interests)
+        )
+        if show_specialisation:
             label = (
                 "Option active"
                 if formation.code == "PREPA_GENERAL"
@@ -394,10 +509,12 @@ class StructuredResponseBuilder:
                 lines.append("Tu y étudieras notamment : " + ", ".join(contents) + ".")
         elif specs:
             lines.append(
-                f"Cette formation comprend {len(specs)} "
-                + ("spécialisation :" if len(specs) == 1 else "spécialisations :")
+                f"Cette formation propose {len(specs)} "
+                + ("spécialisation." if len(specs) == 1 else "spécialisations.")
             )
-            lines.extend(f"• {item.nom}" for item in specs)
+            lines.append(
+                "Je peux te présenter leurs noms et leurs programmes si tu veux les comparer."
+            )
 
         difficulty = self._difficulty(elements)
         if difficulty:
@@ -412,7 +529,9 @@ class StructuredResponseBuilder:
             )
 
         if alternatives:
-            lines.append("Autres formations admissibles à comparer :")
+            lines.append("Autres formations admissibles à comparer :" if all(
+                option.eligibility.status is EligibilityStatus.ELIGIBLE for option in alternatives
+            ) else "Autres pistes à examiner, sous réserve de confirmation de l'admission :")
             for option in alternatives:
                 lines.extend(await self._alternative_summary(option))
 
@@ -420,7 +539,7 @@ class StructuredResponseBuilder:
             lines.append(
                 "Veux-tu que je compare cette Prépa aux licences admissibles selon ton projet et ta manière d'étudier ?"
             )
-        elif primary.specialisation_name:
+        elif show_specialisation:
             lines.append(
                 "Veux-tu d'abord approfondir le programme et les exigences de cette spécialisation ?"
             )
@@ -451,7 +570,7 @@ class StructuredResponseBuilder:
                 for option in decision.alternatives
                 if option.formation_name not in options
             )
-        if options:
+        if options and subject.profile is not AcademicProfile.UNKNOWN:
             profile = (
                 f"ton bac {value_label(subject.bac_specialty)}"
                 if subject.profile is AcademicProfile.NEW_BAC
@@ -496,8 +615,35 @@ class StructuredResponseBuilder:
             return f"Tu m'as indiqué {known}."
         return "Tu ne m'as pas encore indiqué clairement ton niveau d'études actuel."
 
+    async def credential_options(self, subject: SubjectState) -> list[str]:
+        """Find fuller published titles for an underspecified original diploma."""
+        words = fold_text((subject.licence_specialty or '').replace('_', ' ')).split()
+        if subject.profile not in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER} or len(words) != 1 or len(words[0]) < 4:
+            return []
+        rules = (await self.catalogue.orientation_rules.list(PageRequest(page_size=100, filters={'type_regle': 'ADMISSION'}))).items
+        labels = []
+        for rule in rules:
+            expected = (rule.criteres or {}).get('diplome_origine', [])
+            if isinstance(expected, dict):
+                expected = expected.get('in', [])
+            if isinstance(expected, str):
+                expected = [expected]
+            for label in expected:
+                text = fold_text(str(label).replace('_', ' '))
+                if any(token.startswith(words[0]) or words[0].startswith(token) for token in text.split() if len(token) >= 4):
+                    labels.append(text)
+        return list(dict.fromkeys(labels))
+
     @staticmethod
-    def no_confirmed_orientation(subject: SubjectState) -> str:
+    def no_confirmed_orientation(subject: SubjectState, credential_options: Sequence[str] = ()) -> str:
+        if credential_options:
+            specialty = (subject.licence_specialty or '').replace('_', ' ').lower()
+            return (
+                f"Pour examiner une poursuite en cycle ingénieur avec ta licence{(' en ' + specialty) if specialty else ''}, "
+                "il me faut l'intitulé exact de ton diplôme. Un domaine général ne suffit pas à vérifier les conditions d'admission. "
+                "Les règles distinguent notamment : " + ", ".join(credential_options) + ". "
+                "Quel intitulé figure sur ton diplôme ou ton attestation ?"
+            )
         if subject.profile is AcademicProfile.NEW_BAC and subject.bac_specialty:
             profile = f"un bac {value_label(subject.bac_specialty)}"
         elif subject.licence_specialty:
@@ -524,7 +670,7 @@ class StructuredResponseBuilder:
         decision: RecommendationDecision,
     ) -> tuple[RecommendationOption, ...]:
         options = decision.alternatives or (
-            (decision.secondary,) if decision.secondary is not None else ()
+            (decision.secondary,) if getattr(decision, "secondary", None) is not None else ()
         )
         unique: list[RecommendationOption] = []
         seen: set[int] = (
@@ -542,11 +688,6 @@ class StructuredResponseBuilder:
         option: RecommendationOption,
     ) -> list[str]:
         formation = await self.catalogue.formations.require(option.formation_id)
-        specs = (
-            await self.catalogue.specialisations.list(
-                PageRequest(page_size=100, filters={"formation_id": formation.id})
-            )
-        ).items
         parts = [formation.nom]
         if formation.duree_annees:
             parts.append(f"{formation.duree_annees} ans")
@@ -557,23 +698,6 @@ class StructuredResponseBuilder:
             lines.append(
                 "  Autre voie possible pour préparer une poursuite vers un cycle ingénieur."
             )
-        if specs:
-            lines.append(
-                "  Spécialisations : " + ", ".join(item.nom for item in specs) + "."
-            )
-            return lines
-        elements = (
-            await self.catalogue.elements.list(
-                PageRequest(page_size=100, filters={"formation_id": formation.id})
-            )
-        ).items
-        competencies = [
-            item.nom
-            for item in elements
-            if item.type_element.value in {"COMPETENCE", "CONTENU_PROGRAMME"}
-        ][:4]
-        if competencies:
-            lines.append("  Axes étudiés : " + ", ".join(competencies) + ".")
         return lines
 
     async def _scientific_bac_comparison(
@@ -645,6 +769,9 @@ class StructuredResponseBuilder:
         intents: list[str],
         *,
         include_all: bool = False,
+        continuing: bool = False,
+        show_source: bool = True,
+        show_specialisations: bool = True,
     ) -> str:
         formation = target.formation
         specs = (
@@ -664,28 +791,34 @@ class StructuredResponseBuilder:
             or item.specialisation_id in {None, target.specialisation.id}
         ]
         title = target.specialisation.nom if target.specialisation else formation.nom
-        lines = [title]
-        lines.append(f"Page officielle : {FORMATION_LINKS.get(formation.code, 'https://iit.tn/formation/')}")
-
-        if formation.intitule_diplome and formation.code != "PREPA_GENERAL":
-            lines.append(f"Diplôme préparé : {formation.intitule_diplome}.")
-        elif formation.code == "PREPA_GENERAL":
-            lines.append(
-                "Finalité : préparer la poursuite vers un cycle ingénieur; ce cycle n'est pas lui-même un diplôme d'ingénieur."
-            )
-
-        if "DURATION" in intents or {"DETAILS", "PROGRAMME"}.intersection(intents):
+        lines = []
+        overview = "DETAILS" in intents and not set(intents).difference({"DETAILS", "GENERAL"})
+        if overview and not continuing:
+            introduction = f"{title}"
             if formation.duree_annees:
-                lines.append(f"Durée enregistrée : {formation.duree_annees} ans.")
+                introduction += f" se déroule sur {formation.duree_annees} ans"
+            if formation.intitule_diplome and formation.code != "PREPA_GENERAL" and fold_text(formation.intitule_diplome) != fold_text(title):
+                introduction += (" et prépare" if formation.duree_annees else " prépare") + f" au diplôme {formation.intitule_diplome}"
+            lines.append(introduction + ".\n")
+        if overview and formation.code == "PREPA_GENERAL":
+            lines.append("Ce parcours prépare la poursuite vers un cycle ingénieur ; il ne délivre pas lui-même un diplôme d'ingénieur.\n")
+
+        if "DURATION" in intents:
+            if formation.duree_annees:
+                lines.append(f"La formation dure {formation.duree_annees} ans.\n")
             else:
-                lines.append("La durée n'est pas renseignée dans la base active.")
+                lines.append("Je n'ai pas de durée confirmée pour cette formation. L'IIT pourra te la préciser.\n")
 
         if "CAREERS" in intents:
+            public_careers = [item.description for item in relevant if item.type_element.value == "INFORMATION" and "debouches publics" in fold_text(item.nom) and item.description]
             careers = [item.nom for item in relevant if item.type_element.value == "METIER"]
-            if careers:
+            if public_careers:
+                lines.append("Débouchés possibles : " + " ".join(public_careers))
+            elif careers:
                 lines.append("Débouchés possibles : " + ", ".join(careers) + ".")
             else:
                 lines.append("Aucun débouché précis n'est renseigné pour cette portée.")
+            lines.append("Le diplôme ne garantit pas un emploi : le recrutement dépend notamment des compétences, de l'expérience et des employeurs.")
 
         if "INTERNATIONAL" in intents:
             mobility = [item.nom for item in relevant if item.type_element.value == "MOBILITE"]
@@ -699,9 +832,14 @@ class StructuredResponseBuilder:
                 item.nom for item in relevant if item.type_element.value == "CERTIFICATION"
             ]
             if certifications:
-                lines.append("Certifications préparées ou mentionnées : " + ", ".join(certifications) + ".")
+                lines.append("Les certifications mentionnées pour cette formation sont " + ", ".join(dict.fromkeys(certifications)) + ".")
             else:
                 lines.append("Aucune certification n'est renseignée pour cette formation.")
+            lines.append("Leur obtention n'est pas automatique : il faut confirmer les examens et les conditions auprès de l'IIT.\n")
+
+        practical_intents = {"PRACTICE", "PROJECTS", "INTERNSHIPS"}.intersection(intents)
+        if practical_intents:
+            lines.append(await self.practical_learning(target, practical_intents, elements=relevant))
 
         if "DIFFICULTY" in intents:
             difficulty = self._difficulty(relevant)
@@ -739,9 +877,6 @@ class StructuredResponseBuilder:
 
         detail_intents = {"DETAILS", "PROGRAMME"}
         if set(intents).intersection(detail_intents):
-            if target.specialisation is None and specs:
-                lines.append("Spécialisations disponibles :")
-                lines.extend(f"• {item.nom}" for item in specs)
             contents = [
                 item.nom
                 for item in relevant
@@ -752,15 +887,109 @@ class StructuredResponseBuilder:
                 }
             ]
             if contents:
+                contents = list(dict.fromkeys(contents))
                 displayed_contents = contents if include_all else contents[:8]
-                lines.append("Contenus et compétences : " + ", ".join(displayed_contents) + ".")
+                if len(displayed_contents) <= 3:
+                    lines.append("Tu étudieras notamment " + ", ".join(displayed_contents) + ".")
+                else:
+                    lines.append("Voici les matières et compétences au programme :")
+                    lines.extend("• " + item for item in displayed_contents)
+                if len(contents) > len(displayed_contents):
+                    lines.append(f"\nCe sont {len(displayed_contents)} des {len(contents)} éléments disponibles ; tu peux demander la liste complète.")
+            else:
+                lines.append("Je n'ai pas de liste détaillée des matières pour cette formation. L'IIT pourra te communiquer le programme.")
+            if target.specialisation is None and specs and show_specialisations:
+                lines.append("\nTu peux ensuite approfondir l'une de ces spécialisations :")
+                lines.extend(f"• {item.nom}" for item in specs)
 
         if "DIFFICULTY" in intents:
             lines.append("Veux-tu voir le programme détaillé de cette formation ?")
-        elif target.specialisation is None and specs:
+        elif target.specialisation is None and specs and show_specialisations and set(intents).intersection(detail_intents):
             lines.append("Laquelle de ces spécialisations veux-tu approfondir ?")
+        if show_source:
+            lines.append(f"\nPour approfondir {title} : {FORMATION_LINKS.get(formation.code, 'https://iit.tn/formation/')}")
+        return "\n".join(lines)
+
+    async def practical_learning(self, target, intents, *, elements=None) -> str:
+        if elements is None:
+            filters = {"formation_id": target.formation.id if target else None}
+            elements = (await self.catalogue.elements.list(PageRequest(page_size=100, filters=filters))).items
+        criteria = {
+            "PRACTICE": ("Pratique et pédagogie", r"\b(?:prati\w*|projets?\s+(?:appliques?|tutores?|federes?|architecturaux)|travaux pratiques|laboratoire\w*)\b"),
+            "PROJECTS": ("Projets académiques", r"\b(?:projet\s+(?:tutore|federe)|projets?\s+(?:appliques?|academiques?|architecturaux)|pfe|projet\s+de\s+fin)\b"),
+            "INTERNSHIPS": ("Stages", r"\bstages?\b"),
+        }
+        lines = []
+        seen_evidence = set()
+        any_evidence = False
+        for intent, (label, pattern) in criteria.items():
+            if intent not in intents:
+                continue
+            matches = [item for item in elements if item.type_element.value in {"INFORMATION", "CONTENU_PROGRAMME", "MODULE", "MOBILITE", "COMPETENCE"} and re.search(pattern, fold_text(f"{item.nom} {item.description or ''}"))]
+            if len(intents) > 1:
+                lines.append(label + " :")
+            if matches:
+                any_evidence = True
+                evidence = list(dict.fromkeys(
+                    ("Compétence au programme : " if item.type_element.value == "COMPETENCE" else "") + (item.description or item.nom)
+                    for item in matches
+                ))
+                fresh = [text for text in evidence if text not in seen_evidence]
+                seen_evidence.update(fresh)
+                if not fresh:
+                    lines.append("Il s'agit des mêmes activités que celles citées juste au-dessus.")
+                elif len(intents) == 1 and len(fresh) == 1:
+                    if fresh[0].startswith("Compétence au programme : "):
+                        lines.append("Le programme prévoit notamment cette compétence : " + fresh[0].removeprefix("Compétence au programme : "))
+                    else:
+                        introduction = {"INTERNSHIPS": "Pour les stages, le catalogue indique", "PROJECTS": "Côté projets, le programme indique", "PRACTICE": "Pour la pratique, le programme indique"}[intent]
+                        lines.append(f"{introduction} : {fresh[0]}")
+                else:
+                    if len(intents) == 1:
+                        lines.append({"INTERNSHIPS": "Voici les stages mentionnés :", "PROJECTS": "Tu retrouveras ces projets dans le programme :", "PRACTICE": "Voici les éléments de pratique documentés :"}[intent])
+                    lines.extend("• " + text for text in fresh)
+            else:
+                lines.append(f"Je n'ai pas de modalités précises concernant {label.lower()} pour cette formation. Cela ne signifie pas qu'il n'y en a pas ; l'IIT peut confirmer les activités proposées.")
+            lines.append("")
+        if any_evidence:
+            followups = {
+                "INTERNSHIPS": "L'IIT pourra te préciser la durée du stage et les conditions pour y accéder.",
+                "PRACTICE": "Pour le volume de pratique et l'organisation des séances, les modalités restent à confirmer auprès de l'IIT.",
+                "PROJECTS": "L'encadrement, le calendrier et les livrables des projets sont à confirmer auprès de l'IIT.",
+            }
+            lines.append(followups[next(iter(intents))] if len(intents) == 1 else "La durée, l'encadrement et les modalités exactes restent à confirmer auprès de l'IIT.")
+        return "\n".join(lines)
+
+    async def alternance(self, target) -> str:
+        filters = {"formation_id": target.formation.id if target else None}
+        elements = (await self.catalogue.elements.list(PageRequest(page_size=100, filters=filters))).items
+        records = [item for item in elements if item.type_element.value == "INFORMATION" and "alternance" in fold_text(f"{item.nom} {item.description or ''}")]
+        if records:
+            return "Alternance :\n" + "\n".join("• " + (item.description or item.nom) for item in records)
+        return "Alternance : aucun dispositif précis n'est documenté pour cette formation dans la base. Des cours du soir ou un stage ne suffisent pas à confirmer une formation en alternance. Demande à l'IIT le rythme école/entreprise, le contrat et les formations concernées."
+
+    async def admission(self, target, subject, decision) -> str:
+        from app.domain.recommendation.schemas import EligibilityStatus
+        records = (await self.catalogue.orientation_rules.list(PageRequest(page_size=100, filters={"formation_id": target.formation.id}))).items
+        rules = [item for item in records if item.type_regle == "ADMISSION" and item.specialisation_id in {None, target.specialisation.id if target.specialisation else None}]
+        lines = [f"Admission — {target.formation.nom} :"]
+        for rule in rules:
+            if rule.description:
+                lines.append("• " + rule.description)
+            else:
+                for key, criterion in rule.criteres.items():
+                    values = criterion.get("in", []) if isinstance(criterion, dict) else [criterion]
+                    if values:
+                        label = {"diplome": "Diplôme", "type_bac": "Sections de bac", "diplome_origine": "Diplômes d'origine"}.get(key, "Critère")
+                        lines.append(label + " : " + ", ".join(value_label(str(value)) for value in values) + ".")
+        if not rules:
+            lines.append("Les conditions précises ne sont pas renseignées ; l'administration doit confirmer ton admissibilité.")
+        elif decision and decision.status is EligibilityStatus.ELIGIBLE:
+            lines.append("Ton profil est compatible avec les critères enregistrés ; l'admission finale reste soumise à l'étude du dossier par l'IIT.")
+        elif decision and decision.status is EligibilityStatus.NOT_ELIGIBLE:
+            lines.append("Ton profil ne remplit pas les critères enregistrés pour cette formation ; je ne peux pas confirmer une admission ni te proposer cette pré-inscription.")
         else:
-            lines.append("Souhaites-tu ensuite préparer une pré-inscription ?")
+            lines.append("Pour vérifier ton cas, quel diplôme as-tu obtenu et dans quelle spécialité ?")
         return "\n".join(lines)
 
     async def next_detail_step(self, target: AcademicTarget) -> str:
@@ -884,6 +1113,18 @@ class StructuredResponseBuilder:
             ),
             None,
         )
+        registration_links = [
+            item for item in [*elements, *global_elements]
+            if item.type_element.value == "LIEN_PREINSCRIPTION"
+            and getattr(item, "parcours_id", None) in {None, formation.parcours_id}
+            and item.specialisation_id in {None, target.specialisation.id if target.specialisation else None}
+            and getattr(item, "valeur", None)
+        ]
+        if registration_links:
+            parts = urlsplit(registration_links[0].valeur)
+            if parts.scheme in {"http", "https"} and parts.netloc:
+                query = urlencode([(key, value) for key, value in parse_qsl(parts.query) if key != "fbclid" and not key.startswith("utm_")])
+                admission_link = urlunsplit((parts.scheme, parts.netloc, parts.path, query, parts.fragment))
 
         lines = [
             f"Très bien, pour {formation.nom}, la démarche recommandée est la pré-inscription suivie du dossier d'admission."
