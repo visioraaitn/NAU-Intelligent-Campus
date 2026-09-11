@@ -181,6 +181,17 @@ class ChatOrchestrator:
             # not a new claim about the speaker's current qualification.
             facts = replace(facts, profile=None, bac_specialty=None,
                             bac_average=None, math_grade=None)
+        if (
+            facts.profile is AcademicProfile.NEW_BAC
+            and facts.bac_specialty
+            and state.active_state.profile
+            in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER}
+            and not facts.correction
+            and facts.subject == state.active_subject
+        ):
+            # A bac section can complete a higher-level profile; it is not
+            # automatically a correction of the student's current degree.
+            facts = replace(facts, profile=None)
         existing_credential = fold_text((state.active_state.licence_specialty or '').replace('_', ' '))
         clarifies_credential = state.active_state.pending_slot in {'LICENCE_SPECIALTY', 'PROFILE_CONFIRMATION'} or (existing_credential and existing_credential in fold_text(message))
         if clarifies_credential and state.active_state.profile in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER} and not (facts.profile or facts.target or early_target.target) and raw_intents == ['GENERAL']:

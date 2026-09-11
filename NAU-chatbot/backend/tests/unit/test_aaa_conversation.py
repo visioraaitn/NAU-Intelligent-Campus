@@ -4,10 +4,11 @@ from uuid import uuid4
 
 import pytest
 
-from app.domain.conversation.models import AcademicProfile, ConversationState
+from app.domain.conversation.models import AcademicProfile, ConversationState, SubjectState
 from app.services.dialogue.esprit_nlu import DomainClassification, SemanticUnderstanding
 from app.services.eligibility.eligibility_service import EligibilityService
 from tests.unit.test_conversation_audit import audit_bot
+from app.services.recommendation.recommendation_service import RecommendationService
 
 
 @pytest.fixture
@@ -98,6 +99,26 @@ async def test_arabizi_specialty_answer_continues_pending_orientation(industrial
     assert state.active_state.licence_specialty == "INFO"
     assert "Je suis là pour continuer" not in result.answer
     assert result.intents == ("ORIENTATION",)
+
+
+@pytest.mark.asyncio
+async def test_information_licence_does_not_recommend_unrelated_licences(audit_bot):
+    subject = SubjectState(
+        profile=AcademicProfile.LICENCE_STUDENT,
+        licence_specialty="INFO",
+        licence_year=2,
+    )
+
+    assert RecommendationService._allowed_parcours(subject) == {"LICENCE"}
+    assert RecommendationService._formation_matches_academic_domain(
+        subject, "LICENCE_INFO"
+    )
+    assert not RecommendationService._formation_matches_academic_domain(
+        subject, "LICENCE_ELEC_SEIER"
+    )
+    assert not RecommendationService._formation_matches_academic_domain(
+        subject, "LICENCE_MECATRONIQUE_SI"
+    )
 
 
 @pytest.mark.asyncio

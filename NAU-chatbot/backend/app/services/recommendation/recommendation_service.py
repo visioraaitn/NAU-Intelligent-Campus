@@ -139,6 +139,16 @@ class RecommendationService:
             )
         )
         if not candidates:
+            if (
+                subject.profile is AcademicProfile.LICENCE_STUDENT
+                and subject.target != "ENGINEERING"
+                and allowed_parcours == {"LICENCE"}
+            ):
+                # If IIT has no continuation licence for this external domain,
+                # keep the student oriented toward a conditional engineering
+                # review rather than returning no useful path.
+                engineering_subject = subject.model_copy(update={"target": "ENGINEERING"})
+                return await self.recommend(engineering_subject)
             return RecommendationDecision(None, None)
         primary = candidates[0]
         if has_specific_interests:
@@ -229,11 +239,11 @@ class RecommendationService:
             if subject.bac_specialty:
                 return {"LICENCE"}
             return set()
-        if (
-            subject.profile is AcademicProfile.LICENCE_STUDENT
-            and subject.target == "LICENCE"
-        ):
-            return {"LICENCE"}
+        if subject.profile is AcademicProfile.LICENCE_STUDENT:
+            # An unfinished licence is first oriented toward continuation of
+            # the current degree. Engineering is a later option unless the
+            # student explicitly asks for that target.
+            return {"INGENIEUR"} if subject.target == "ENGINEERING" else {"LICENCE"}
         return PROFILE_PARCOURS.get(subject.profile)
 
     @staticmethod
@@ -251,8 +261,6 @@ class RecommendationService:
             AcademicProfile.LICENCE_HOLDER,
         }:
             return True
-        if formation_code.startswith("LICENCE_"):
-            return True
         specialty = fold_text(subject.licence_specialty or "")
         if not specialty:
             return True
@@ -266,6 +274,23 @@ class RecommendationService:
                 for token in tokens
                 for term in terms
             )
+
+        if formation_code.startswith("LICENCE_"):
+            if near_any((
+                "info", "informatique", "gestion", "finance", "compta", "marketing",
+                "logiciel", "reseau", "data", "cyber", "decisionnel",
+            )):
+                return formation_code == "LICENCE_INFO"
+            if near_any(("mecan", "mecanique", "mecatronique", "robotique")):
+                return formation_code == "LICENCE_MECATRONIQUE_SI"
+            if near_any((
+                "electrique", "electronique", "energie", "energetique",
+                "environnement",
+            )):
+                return formation_code == "LICENCE_ELEC_SEIER"
+            # A licence outside the IIT catalogue remains eligible for an
+            # admissions review, but do not invent a specific IIT match.
+            return False
 
         if near_any((
             "info", "informatique", "gestion", "finance", "compta", "marketing",

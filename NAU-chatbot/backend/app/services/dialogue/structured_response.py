@@ -364,7 +364,10 @@ class StructuredResponseBuilder:
             )
         elif (
             subject.profile is AcademicProfile.LICENCE_STUDENT
-            and subject.target == "LICENCE"
+            and (
+                subject.target == "LICENCE"
+                or formation.code.startswith("LICENCE_")
+            )
         ):
             level = subject.licence_year
             has_interest = any(
@@ -379,12 +382,13 @@ class StructuredResponseBuilder:
                 level_guidance = (
                     f"Comme tu es en {level}e année, contacte l'admission IIT avec tes relevés et le programme "
                     f"suivi : elle étudiera la possibilité de te faire poursuivre au niveau correspondant, "
-                    "sans garantir automatiquement une entrée directe."
+                    "notamment une éventuelle entrée en deuxième année, sans garantie automatique."
                 )
             else:
                 level_guidance = (
                     "Pour déterminer l'année de reprise ou de poursuite, l'admission doit vérifier ton niveau, "
-                    "tes relevés et le contenu des matières déjà validées."
+                    "tes relevés et le contenu des matières déjà validées. Si tu es en L2, "
+                    "elle pourra notamment étudier une entrée en deuxième année."
                 )
             lines.append(
                 f"Tu veux continuer tes études à l'IIT : la piste proposée est {formation.nom}. "
