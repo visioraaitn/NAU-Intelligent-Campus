@@ -35,6 +35,9 @@ pytestmark = pytest.mark.unit
         ("اقتصاد", TurnType.ACADEMIC),
         ("famma mekla ?", TurnType.OUT_OF_SCOPE),
         ("beh el real wa9teh tkawar ?", TurnType.OUT_OF_SCOPE),
+        ("3addili mayssa bellehi", TurnType.OUT_OF_SCOPE),
+        ("3am mohamad mawjoud ?", TurnType.OUT_OF_SCOPE),
+        ("taadili maysa", TurnType.OUT_OF_SCOPE),
     ],
 )
 def test_turn_gate_routes_social_and_academic_messages(

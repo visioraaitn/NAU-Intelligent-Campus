@@ -58,6 +58,8 @@ patterns:
   - '\b(pourquoi(?: choisir)?(?: l)? iit|avantage|convaincs|valeur|ahkili\w*\s+(?:al|ala)\s+(?:l\s+)?iit|a\s+propos\s+(?:de\s+)?(?:l\s+)?iit)\b'
   OUT_OF_SCOPE:
   - \b(?:m[eé]t[eé]o|weather|ta9s|taks|jaw|chna7wel|chnaoua\s+el\s+jaw|chnoua?\s+ta9s|chnoua?\s+el\s+jaw|football|match|real(?:\s+madrid)?|barca|koura|wa9teh\s+(?:tkawar|yel3eb)|recette|cuisine|couscous|mekla|cin[eé]ma|musique)\b
+  - \b(?:3addili|3adili|3addli|ta3dili|taadili)\s+[a-zà-ÿ]{2,}(?:\s+(?:bellehi|s'il\s+te\s+plait))?\b
+  - \b(?:3am|am|oncle|tonton)\s+[a-zà-ÿ]{3,}(?:\s+(?:mawjoud|present|présent|là))?\b
   PRACTICE:
   - \b(?:pratiques?|tp|travaux\s+pratiques|laboratoires?|labs?|apprentissage\s+pratique|hands\s+on)\b
   PROJECTS:

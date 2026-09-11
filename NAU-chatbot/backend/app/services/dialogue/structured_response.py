@@ -455,7 +455,9 @@ class StructuredResponseBuilder:
             )
         elif subject.profile is AcademicProfile.PREPA_HOLDER:
             lines.append(
-                f"Comme tu as validé la Prépa, la suite logique est le cycle ingénieur {formation.nom}."
+                f"Comme tu as validé la Prépa, la suite logique est le cycle ingénieur. "
+                f"{formation.nom} est une piste à comparer, pas une recommandation définitive : "
+                "le choix dépend de ton domaine d'intérêt et de l'étude de ton dossier."
             )
         elif subject.profile is AcademicProfile.PREPA_STUDENT:
             lines.append(

@@ -17,6 +17,7 @@ from tests.unit.test_conversation_audit import audit_bot
     'barra neykkk', 'barra neyk w les tarifs', 'e.z.z.e.b.i',
     'e z z e b i', 'ezz**ebi', 'ne\u200byk', 'n.e.y.k',
     'ｂａｒｒａ ｎｅｙｋ', 'fok ala ezz3bi', 'بَرَّا نِيك',
+    'ba3bousa',
 ])
 def test_abusive_spelling_variants_are_blocked_before_academic_routing(message):
     assert TurnGate().classify(message) is TurnType.INAPPROPRIATE

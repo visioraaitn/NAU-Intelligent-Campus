@@ -1,10 +1,10 @@
 patterns:
   inappropriate:
-    - '\b(asba|zab|zebi|zebbi|zabbi|zbbi|nayek|ta7an|khra|9a7ba|kahba)\b'
+    - '\b(asba|zab|zebi|zebbi|zabbi|zbbi|nayek|ta7an|khra|9a7ba|kahba|ba3bousa)\b'
     - '\bnik\b'
     - '\bnik\s+omm?(ok|ek|ik|ouk)\b'
 terms:
-  vocabulary: [asba, zab, zebi, zabbi, zbbi, nayek, ta7an, khra, 9a7ba, kahba, nik, connard, connasse, debile, idiot, fuck, shit, زبي, زب, عصبة, قحبة, خرا, نيك]
+  vocabulary: [asba, zab, zebi, zabbi, zbbi, nayek, ta7an, khra, 9a7ba, kahba, ba3bousa, nik, connard, connasse, debile, idiot, fuck, shit, زبي, زب, عصبة, قحبة, خرا, نيك]
   # Only reviewed lexemes with a distinctive consonant sequence. Do not apply
   # vowel-insensitive matching to every short word (it creates false positives).
   phonetic_vocabulary: [nayek]
