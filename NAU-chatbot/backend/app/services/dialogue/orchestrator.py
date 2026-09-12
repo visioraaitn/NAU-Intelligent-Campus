@@ -264,6 +264,33 @@ class ChatOrchestrator:
                     domain = await self.esprit.classify_domain(message)
                 except Exception:
                     logger.warning("DOMAIN_GATE unavailable", exc_info=True)
+            if domain is None or domain.confidence < .55:
+                # Never send an unclassified message to the academic answer
+                # path: an unavailable or uncertain NLU result must not invent
+                # an IIT recommendation.
+                return self._finish(
+                    state,
+                    message,
+                    self._unclear_answer(),
+                    ["GENERAL"],
+                    DialogueAct.ASK_INFORMATION,
+                    first_reply,
+                )
+            if (
+                domain.label == "IN_SCOPE"
+                and not domain.iit_signal
+            ):
+                # The active subject is context only; it is not evidence that
+                # this new message concerns IIT. Require a signal from the
+                # message itself before reusing the academic context.
+                return self._finish(
+                    state,
+                    message,
+                    self._unclear_answer(),
+                    ["GENERAL"],
+                    DialogueAct.ASK_INFORMATION,
+                    first_reply,
+                )
         if domain and domain.label == "INAPPROPRIATE":
             return self._refuse_inappropriate(state, original_state)
         if domain and domain.label == "SOCIAL" and semantic and semantic.social:

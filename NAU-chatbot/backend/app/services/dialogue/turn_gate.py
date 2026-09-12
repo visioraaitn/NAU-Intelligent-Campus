@@ -52,7 +52,7 @@ class TurnGate:
         r"\b(?:iit|bac(?:calaureat)?|licen[cs]e|mastere?|prepa|preparatoire|"
         r"formations?|specialites?|filieres?|parcours|genie|ingenieur|architecture|"
         r"matieres?|modules?|diplome|admission|admissible|pre[ -]?inscri\w*|"
-        r"mensualites?|tarifs?|b?9add?e(?:h|ch)|accredit\w*|certifications?|certifs?|campus|"
+        r"mensualites?|tarifs?|frais|b?9add?e(?:h|ch)|accredit\w*|certifications?|certifs?|campus|"
         r"mo3taraf|mo3taref|ma3tref|ma3rouf|معترف|"
         r"cours?\s+(?:du|de)?\s*soir[e]?|"
         r"(?:na9ra|n9ra|nakra|nkra)\s+(?:b|bel|fi|fel)\s*(?:el\s*)?lil|"
