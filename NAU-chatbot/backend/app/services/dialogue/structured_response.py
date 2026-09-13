@@ -427,10 +427,11 @@ class StructuredResponseBuilder:
                 lines.append(
                     f"Avec ton bac {bac}, {formation.nom} est une piste compatible à explorer."
                 )
-            lines.append(
-                "Si les conditions de la Prépa correspondent à ton bac, c'est aussi une voie possible vers le cycle ingénieur; "
-                "je peux comparer les deux parcours selon ton objectif."
-            )
+            if subject.bac_specialty in {"MATH", "SCIENCES"}:
+                lines.append(
+                    "Si les conditions de la Prépa correspondent à ton bac, c'est aussi une voie possible vers le cycle ingénieur; "
+                    "je peux comparer les deux parcours selon ton objectif."
+                )
             if (
                 subject.bac_specialty == "TECHNIQUE"
                 and subject.interests

@@ -438,6 +438,15 @@ async def test_new_economics_bac_is_routed_only_to_licence(
     assert "Ingénieur" not in decision.primary.formation_name
 
 
+def test_technical_bac_is_routed_only_to_licence_paths() -> None:
+    subject = SubjectState(
+        profile=AcademicProfile.NEW_BAC,
+        bac_specialty="TECHNIQUE",
+    )
+
+    assert RecommendationService._allowed_parcours(subject) == {"LICENCE"}
+
+
 @pytest.mark.asyncio
 @pytest.mark.parametrize(
     ("bac", "expected_primary"),
