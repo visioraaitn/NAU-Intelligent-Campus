@@ -564,6 +564,14 @@ class StructuredResponseBuilder:
             lines.append(f"Durée : {formation.duree_annees} ans.")
         if formation.intitule_diplome and formation.code != "PREPA_GENERAL":
             lines.append(f"Diplôme préparé : {formation.intitule_diplome}.")
+        languages = getattr(formation, "langues_enseignement", None) or []
+        if languages:
+            lines.append(
+                "Parcours disponibles : "
+                + " et ".join(_language_label(language) for language in languages)
+                + ". Tu peux choisir la langue souhaitée lors de la candidature, "
+                "sous réserve des groupes ouverts pour l'année visée."
+            )
 
         show_specialisation = bool(
             primary.specialisation_name
@@ -586,18 +594,24 @@ class StructuredResponseBuilder:
                 for item in relevant
                 if item.type_element.value
                 in {"CONTENU_PROGRAMME", "MODULE", "COMPETENCE"}
-            ][:6]
+            ]
             if contents:
-                lines.append("Tu y étudieras notamment : " + ", ".join(contents) + ".")
+                lines.append(
+                    "Voici la liste des matières et compétences enregistrées :\n"
+                    + "\n".join(f"• {content}" for content in contents)
+                )
         elif formation.code == "PREPA_GENERAL" and specs:
             lines.append("Option active : " + ", ".join(item.nom for item in specs) + ".")
             contents = [
                 item.nom
                 for item in elements
                 if item.type_element.value in {"CONTENU_PROGRAMME", "MODULE"}
-            ][:6]
+            ]
             if contents:
-                lines.append("Tu y étudieras notamment : " + ", ".join(contents) + ".")
+                lines.append(
+                    "Voici la liste des matières et modules enregistrés :\n"
+                    + "\n".join(f"• {content}" for content in contents)
+                )
         elif specs:
             lines.append(
                 f"Cette formation propose {len(specs)} "
@@ -606,6 +620,18 @@ class StructuredResponseBuilder:
             lines.append(
                 "Je peux te présenter leurs noms et leurs programmes si tu veux les comparer."
             )
+        else:
+            contents = [
+                item.nom
+                for item in elements
+                if item.type_element.value
+                in {"CONTENU_PROGRAMME", "MODULE", "COMPETENCE"}
+            ]
+            if contents:
+                lines.append(
+                    "Voici la liste des matières et compétences enregistrées :\n"
+                    + "\n".join(f"• {content}" for content in contents)
+                )
 
         difficulty = self._difficulty(elements)
         if difficulty:
