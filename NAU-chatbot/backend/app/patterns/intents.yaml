@@ -2,6 +2,8 @@ patterns:
   CATALOG:
   - \b(quelles formations|quelle formations|formations disponibles|liste des formations|que propose l iit|formations propose)\b
   - \b(?:quels?\s+(?:sont\s+)?(?:les\s+)?parcours|tous?\s+les\s+(?:parcours|formations)|toutes\s+les\s+(?:formations|licences)|licences?\s+(?:disponibles?|proposees?))\b
+  - \b(?:quelles?\s+sont\s+)?les?\s+lang(?:ue|ues)\s+(?:d[' ]enseignement|enseigne(?:ment|es?)|disponibles?)\b
+  - \b(?:fran[cç]ais|anglais|english)\s+(?:ou|et)\s+(?:fran[cç]ais|anglais|english)\b
   - \b(?:chnowa|chnoua|chneya|chnouma)\s+(?:ne[jg]+em|na[jg]+em)\s+(?:na9ra|n9ra|nkra)\b
   - ^licences?$
   - \b(?:lprogramme|programme)\s+(?:mte3|mtaa|de)\s+(?:l\s+)?iit\b

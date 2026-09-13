@@ -450,8 +450,9 @@ class StructuredResponseBuilder:
                 )
             elif subject.bac_specialty == "TECHNIQUE":
                 lines.append(
-                    "Avec un bac technique, l'informatique et la Mécatronique sont deux choix possibles; "
-                    "je ne classe pas définitivement l'un devant l'autre sans connaître ton projet."
+                    "Pour un bac technique, la Mécatronique est ici le premier choix indicatif; "
+                    "la Licence en Informatique reste une deuxième option cohérente. "
+                    "Le meilleur choix final dépend de ton projet."
                 )
         elif (
             subject.profile is AcademicProfile.LICENCE_STUDENT
@@ -626,19 +627,6 @@ class StructuredResponseBuilder:
             lines.append(
                 "Je peux te présenter leurs noms et leurs programmes si tu veux les comparer."
             )
-        else:
-            contents = [
-                item.nom
-                for item in elements
-                if item.type_element.value
-                in {"CONTENU_PROGRAMME", "MODULE", "COMPETENCE"}
-            ]
-            if contents:
-                lines.append(
-                    "Voici la liste des matières et compétences enregistrées :\n"
-                    + "\n".join(f"• {content}" for content in contents)
-                )
-
         difficulty = self._difficulty(elements)
         if difficulty:
             lines.append("Niveau d'exigence : " + difficulty)
@@ -667,9 +655,16 @@ class StructuredResponseBuilder:
                 "Veux-tu d'abord approfondir le programme et les exigences de cette spécialisation ?"
             )
         elif specs:
-            lines.append(
-                "Veux-tu que je t'aide à choisir la spécialisation la plus adaptée à tes intérêts ?"
-            )
+            if subject.profile is AcademicProfile.NEW_BAC:
+                lines.append(
+                    "Commence par choisir la formation (par exemple la Licence en Informatique) ; "
+                    "les spécialisations se comparent ensuite dans cette formation. "
+                    "Veux-tu comparer les formations admissibles ou voir le programme complet ?"
+                )
+            else:
+                lines.append(
+                    "Veux-tu que je t'aide à choisir la spécialisation la plus adaptée à tes intérêts ?"
+                )
         else:
             lines.append(
                 "Veux-tu voir le programme détaillé de cette formation ?"

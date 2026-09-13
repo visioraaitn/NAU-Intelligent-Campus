@@ -67,10 +67,13 @@ class RawFactExtractor:
         ):
             licence_specialty = None
         interests: list[str] = []
+        personal_preference = bool(profile) or bool(re.search(
+            r"\b(?:j'aime|je prefere|je veux|je souhaite|m'interesse|nheb|nhb|t3jebni)\b|نحب|أحب", text
+        ))
         for interest, terms in self.interest_terms.items():
             if any(contains_phrase(text, term) for term in terms):
                 # A negated preference is a rejection, never a positive fact.
-                if not negation.has_negation:
+                if not negation.has_negation and (personal_preference or any(text == fold_text(term) for term in terms)):
                     interests.append(interest)
         target = None
         goal_cues = ("nheb", "je veux", "je souhaite", "objectif", "devenir", "nkamel", "poursuivre")
@@ -137,7 +140,10 @@ class RawFactExtractor:
             candidates.append(AcademicProfile.MASTER_HOLDER)
         if self._matches("licence_holder", text):
             candidates.append(AcademicProfile.LICENCE_HOLDER)
-        elif self._matches("licence_student", text):
+        elif self._matches("licence_student", text) and (
+            re.search(r"\b(?:je|j'ai|ena|andi|3andi|na9ra|n9ra|mazelt|etudiant|etudiante)\b", text)
+            or (len(text.split()) <= 4 and re.match(r"^(?:en\s+)?licence\b", text))
+        ):
             candidates.append(AcademicProfile.LICENCE_STUDENT)
         if self._matches("prepa_holder", text):
             candidates.append(AcademicProfile.PREPA_HOLDER)

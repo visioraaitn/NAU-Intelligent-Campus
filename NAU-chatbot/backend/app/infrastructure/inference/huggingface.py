@@ -1,9 +1,14 @@
 from __future__ import annotations
 
+import os
 import re
 from collections.abc import Sequence
 from pathlib import Path
 from typing import Any
+
+from app.core.config import get_settings
+
+os.environ.setdefault("HF_HOME", get_settings().hf_home)
 
 import torch
 from peft import PeftConfig, PeftModel

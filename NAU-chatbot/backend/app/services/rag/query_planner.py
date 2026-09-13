@@ -21,6 +21,13 @@ class RagQueryPlanner:
     def __init__(self, config: RagFileConfig | None = None) -> None:
         self.config = config or rag_config()
 
+    def plans(self, query: str, intents: Sequence[str], *, formation_code: str | None,
+              specialisation_code: str | None) -> tuple[RagQueryPlan, ...]:
+        """Retrieve each requested axis; a fee filter must not hide modules."""
+        plans = [self.plan(query, [intent], formation_code=formation_code,
+                           specialisation_code=specialisation_code) for intent in intents]
+        return tuple(dict.fromkeys(plans))
+
     def plan(
         self,
         query: str,

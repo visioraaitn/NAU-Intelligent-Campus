@@ -34,6 +34,19 @@ def test_observed_questions_retain_all_requested_topics(message, expected):
     actual=IntentDetector().detect(message,previous=(),scope=ContextScope.CURRENT,dialogue_act=DialogueAct.ASK_INFORMATION,slot_parsed=False)
     assert expected <= set(actual)
 
+
+def test_new_bac_job_goal_starts_orientation_qualification() -> None:
+    intents = IntentDetector().detect(
+        "bellehi ena sna njeht bac w nheb na9ra haja nel9a fiha khedma nhar ekher",
+        previous=(),
+        scope=ContextScope.CURRENT,
+        dialogue_act=DialogueAct.ASK_INFORMATION,
+        slot_parsed=False,
+    )
+
+    assert "ORIENTATION" in intents
+    assert "CAREERS" in intents
+
 @pytest.mark.parametrize('confirmation',['ay','ayh','ey','oui','bh ay'])
 def test_short_confirmation_continues_only_pending_action(confirmation):
     subject=ConversationState.new(uuid4()).active_state
@@ -86,6 +99,19 @@ async def test_profile_question_does_not_hide_requested_catalogue_fact(audit_bot
     response=await bot.process('conseille moi une formation et donne les tarifs',ConversationState.new(uuid4()))
     assert 'tarif' in response.answer.lower() or 'frais' in response.answer.lower()
     assert 'où tu en es' in response.answer
+
+
+@pytest.mark.asyncio
+async def test_new_bac_job_goal_asks_section_without_requesting_a_formation(audit_bot):
+    bot, _ = audit_bot
+
+    response = await bot.process(
+        "bellehi ena sna njeht bac w nheb na9ra haja nel9a fiha khedma nhar ekher",
+        ConversationState.new(uuid4()),
+    )
+
+    assert "Quelle est ta section de bac ?" in response.answer
+    assert "il me faut d'abord le nom de la formation" not in response.answer
 
 
 @pytest.mark.asyncio
@@ -142,7 +168,7 @@ async def test_semantic_topics_route_without_pattern_match(audit_bot):
     bot,_=audit_bot
     bot.esprit.understand=AsyncMock(return_value=SemanticUnderstanding(
         DomainClassification('IN_SCOPE',.96,True), 'Les projets et stages en licence informatique', ('PROJECTS','INTERNSHIPS')))
-    response=await bot.process('stg w prjts',ConversationState.new(uuid4()))
+    response=await bot.process('stg w prjts licence informatique',ConversationState.new(uuid4()))
     assert 'Projet Tutoré' in response.answer and 'Stage international' in response.answer
     assert set(response.intents)=={'PROJECTS','INTERNSHIPS'}
 

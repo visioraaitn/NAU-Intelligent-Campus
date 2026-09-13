@@ -24,6 +24,8 @@ class SemanticUnderstanding:
     normalized: str
     intents: tuple[str, ...] = ()
     social: str = ""
+    uses_context: bool = False
+    target_mention: str = ""
 
 
 # Bounded, short-lived cache contains linguistic interpretations, never answers
@@ -41,6 +43,8 @@ class EspritNluService:
             LLMMessage('user', message),
         ), max_new_tokens=65)
         payload = json.loads(raw)
+        if not isinstance(payload, dict):
+            raise ValueError('invalid credential interpretation')
         specialty = payload.get('specialty', '')
         confidence = float(payload.get('confidence', 0))
         if not isinstance(specialty, str) or len(specialty) > 80 or not 0 <= confidence <= 1:
@@ -71,6 +75,8 @@ class EspritNluService:
             LLMMessage("user", message),
         ), max_new_tokens=45)
         payload = json.loads(raw)
+        if not isinstance(payload, dict):
+            raise ValueError('invalid social classification')
         kind = payload.get("kind")
         confidence = float(payload.get("confidence", 0))
         if kind not in {"GREETING", "HOW_ARE_YOU", "THANKS", "GOODBYE", "ACKNOWLEDGEMENT", "CLARIFICATION", "IDENTITY", "INAPPROPRIATE", "UNKNOWN"} or not 0 <= confidence <= 1:
@@ -101,6 +107,8 @@ class EspritNluService:
             max_new_tokens=180,
         )
         payload = json.loads(raw)
+        if not isinstance(payload, dict):
+            raise ValueError('invalid semantic classification')
         label = payload.get("label")
         confidence = float(payload.get("confidence", 0))
         if label not in {"IN_SCOPE", "OUT_OF_SCOPE", "UNCLEAR", "SOCIAL", "INAPPROPRIATE"} or not 0 <= confidence <= 1:
@@ -108,15 +116,26 @@ class EspritNluService:
         normalized = payload.get("normalized", "")
         intents = payload.get("intents", [])
         social = payload.get("social", "")
+        uses_context = payload.get("uses_context", False)
+        target_mention = payload.get("target_mention", "")
+        if type(uses_context) is not bool or not isinstance(target_mention, str):
+            raise ValueError("invalid reference interpretation")
+        from app.services.dialogue.normalizer import contains_phrase, fold_text
+        if target_mention and not contains_phrase(fold_text(message), target_mention):
+            raise ValueError("target mention is absent from the message")
         if not isinstance(normalized, str) or len(normalized) > 2000 or not isinstance(intents, list):
             raise ValueError("invalid semantic interpretation")
         if any(not isinstance(intent, str) or intent not in ALLOWED_INTENTS for intent in intents):
             raise ValueError("unknown semantic intent")
+        if label != "IN_SCOPE" and intents:
+            raise ValueError("nonacademic classification contains academic intents")
+        if label == "IN_SCOPE" and set(intents).intersection({"OUT_OF_SCOPE", "GENERAL"}):
+            raise ValueError("contradictory semantic intents")
         if social not in {"", "GREETING", "HOW_ARE_YOU", "THANKS", "GOODBYE", "SMALL_TALK", "ACKNOWLEDGEMENT", "CLARIFICATION", "IDENTITY"}:
             raise ValueError("unknown social act")
         result = SemanticUnderstanding(
             DomainClassification(label, confidence, payload.get("iit_signal") is True),
-            normalized, tuple(dict.fromkeys(intents)), social,
+            normalized, tuple(dict.fromkeys(intents)), social, uses_context, target_mention,
         )
         if confidence >= .8:
             _semantic_cache[key] = (monotonic(), result)

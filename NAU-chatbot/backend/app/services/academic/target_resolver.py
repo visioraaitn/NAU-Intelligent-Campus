@@ -150,7 +150,7 @@ class AcademicTargetResolver:
         candidate_tokens = re.sub(r"[^a-z0-9 ]+", " ", text).split()
         if not candidate_tokens or len(candidate_tokens) > 12:
             return None
-        scored: list[tuple[float, str]] = []
+        scores_by_code: dict[str, float] = {}
         for alias, code in aliases.items():
             alias_tokens = alias.split()
             if not alias_tokens or len(alias_tokens) > len(candidate_tokens):
@@ -169,7 +169,10 @@ class AcademicTargetResolver:
                 ),
                 default=0.0,
             )
-            scored.append((best, code))
+            scores_by_code[code] = max(best, scores_by_code.get(code, 0.0))
+        # Alias spellings of the same offer are supporting evidence, not
+        # competing offers. Only distinct entities count towards ambiguity.
+        scored = sorted((score, code) for code, score in scores_by_code.items())
         scored.sort(reverse=True)
         if not scored or scored[0][0] < 0.84:
             return None

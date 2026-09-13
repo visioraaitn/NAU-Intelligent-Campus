@@ -71,6 +71,12 @@ class SubjectState(BaseModel):
     difficulty_preferences: list[str] = Field(default_factory=list, max_length=16)
     recommended_offer: str | None = None
     recommended_specialisation: str | None = None
+    # Historical recommendation fields remain compatible with stored sessions.
+    # Only an open topic plus an explicit follow-up permits their reuse.
+    topic_open: bool = True
+    current_offer: str | None = None
+    current_specialisation: str | None = None
+    topic_initialized: bool = False
     pending_slot: str | None = None
     pending_action: str | None = None
     asked_slots: dict[str, int] = Field(default_factory=dict)
@@ -94,6 +100,14 @@ class SubjectState(BaseModel):
     cta_count: int = Field(default=0, ge=0)
     last_recommendation_turn: int = -99
     conversion_stage: ConversionStage = ConversionStage.DISCOVERY
+
+    @property
+    def topic_offer(self) -> str | None:
+        return self.current_offer if self.topic_initialized else self.recommended_offer
+
+    @property
+    def topic_specialisation(self) -> str | None:
+        return self.current_specialisation if self.topic_initialized else self.recommended_specialisation
 
 
 def _subject_map() -> dict[ConversationSubject, SubjectState]:

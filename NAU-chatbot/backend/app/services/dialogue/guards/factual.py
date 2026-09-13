@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from collections.abc import Sequence
 
@@ -10,6 +11,25 @@ from app.services.dialogue.normalizer import fold_text
 
 
 class FactualGuard:
+    @staticmethod
+    def render_selection(raw: str, facts: Sequence[RagFact]) -> str:
+        """The model selects evidence; it cannot author new academic claims.
+
+        Category checks alone cannot validate a number, course or condition.
+        Render only source text selected via a strict, bounded ID contract.
+        """
+        payload = json.loads(raw)
+        if not isinstance(payload, dict) or set(payload) != {"fact_ids"}:
+            raise ValueError("invalid evidence selection")
+        ids = payload["fact_ids"]
+        if (not isinstance(ids, list) or len(ids) > len(facts)
+                or any(type(index) is not int or not 0 <= index < len(facts) for index in ids)
+                or len(set(ids)) != len(ids)):
+            raise ValueError("invalid evidence identifiers")
+        if any(not facts[index].source_ref for index in ids):
+            raise ValueError("undocumented evidence")
+        return "\n".join(facts[index].text for index in ids)
+
     FORBIDDEN = (
         re.compile(r"\badmission (est )?garantie\b", re.I),
         re.compile(r"\bemploi (est )?garanti\b", re.I),

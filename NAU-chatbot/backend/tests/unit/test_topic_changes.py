@@ -47,6 +47,21 @@ async def test_catalogue_question_after_fees_uses_current_semantics(audit_bot):
     assert state.active_state.bac_specialty is None
 
 
+@pytest.mark.asyncio
+async def test_teaching_language_question_is_not_rejected_by_domain_gate(audit_bot):
+    bot, _ = audit_bot
+    bot.esprit.classify_domain = AsyncMock(
+        side_effect=AssertionError("deterministic intent should classify this turn")
+    )
+    state = ConversationState.new(uuid4())
+    state.active_state.last_intents = ["FEES"]
+
+    result = await bot.process("Quelles sont les langues d'enseignement ?", state)
+
+    assert result.intents == ("CATALOG",)
+    assert "formations IIT" in result.answer
+
+
 def test_denied_bac_is_not_written_back_as_a_positive_fact():
     state = ConversationState.new(uuid4())
     state.active_state.profile = AcademicProfile.NEW_BAC

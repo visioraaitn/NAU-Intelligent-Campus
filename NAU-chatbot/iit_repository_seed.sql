@@ -592,11 +592,11 @@ INSERT INTO public.alembic_version (version_num) VALUES
 
 INSERT INTO public.formation (id, parcours_id, code, nom, intitule_diplome, duree_annees, nb_semestres, credits_total, description, source_ref, actif, created_at, updated_at, langues_enseignement) VALUES
 	(10, 4, 'ARCHITECTURE_DNA', 'Diplôme National d''Architecte', 'Diplôme National d''Architecte', 6, 12, NULL, NULL, 'FLYER_ARCHITECTURE', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:58:53.548642+01', '{FRANCAIS}'),
-	(6, 3, 'INGENIEUR_CIVIL', 'Génie Civil', 'Diplôme National d''Ingénieur en Génie Civil', 3, 6, 180, NULL, 'FLYER_GENIE_CIVIL', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:00.386944+01', '{FRANCAIS}'),
-	(7, 3, 'INGENIEUR_INDUSTRIEL', 'Génie Industriel', 'Diplôme National d''Ingénieur en Génie Industriel', 3, 6, 180, NULL, 'FLYER_GENIE_INDUSTRIEL', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:05.045308+01', '{FRANCAIS}'),
-	(5, 3, 'INGENIEUR_INFO', 'Génie Informatique', 'Diplôme National d''Ingénieur en Génie Informatique', 3, 6, NULL, NULL, 'FLYER_GENIE_INFO', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:14.485992+01', '{FRANCAIS}'),
-	(8, 3, 'INGENIEUR_MECANIQUE', 'Génie Mécanique', 'Diplôme National d''Ingénieur en Génie Mécanique', 3, 6, 180, NULL, 'FLYER_GENIE_MECANIQUE', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:19.082825+01', '{FRANCAIS}'),
-	(9, 3, 'INGENIEUR_PROCEDES', 'Génie des Procédés', 'Diplôme National d''Ingénieur en Génie des Procédés', 3, 6, 180, NULL, 'FLYER_GENIE_PROCEDES', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:22.732269+01', '{FRANCAIS}'),
+	(6, 3, 'INGENIEUR_CIVIL', 'Génie Civil', 'Diplôme National d''Ingénieur en Génie Civil', 3, 6, 180, NULL, 'FLYER_GENIE_CIVIL', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:00.386944+01', '{FRANCAIS,ANGLAIS}'),
+	(7, 3, 'INGENIEUR_INDUSTRIEL', 'Génie Industriel', 'Diplôme National d''Ingénieur en Génie Industriel', 3, 6, 180, NULL, 'FLYER_GENIE_INDUSTRIEL', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:05.045308+01', '{FRANCAIS,ANGLAIS}'),
+	(5, 3, 'INGENIEUR_INFO', 'Génie Informatique', 'Diplôme National d''Ingénieur en Génie Informatique', 3, 6, NULL, NULL, 'FLYER_GENIE_INFO', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:14.485992+01', '{FRANCAIS,ANGLAIS}'),
+	(8, 3, 'INGENIEUR_MECANIQUE', 'Génie Mécanique', 'Diplôme National d''Ingénieur en Génie Mécanique', 3, 6, 180, NULL, 'FLYER_GENIE_MECANIQUE', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:19.082825+01', '{FRANCAIS,ANGLAIS}'),
+	(9, 3, 'INGENIEUR_PROCEDES', 'Génie des Procédés', 'Diplôme National d''Ingénieur en Génie des Procédés', 3, 6, 180, NULL, 'FLYER_GENIE_PROCEDES', true, '2026-08-30 13:15:39.565163+01', '2026-08-31 19:59:22.732269+01', '{FRANCAIS,ANGLAIS}'),
 	(1, 1, 'PREPA_GENERAL', 'Cycle Préparatoire', 'Diplôme du cycle préparatoire aux études d’ingénieur', 2, 4, NULL, 'Cycle Préparatoire général', 'SRC_PREPA', true, '2026-08-30 13:15:21.369956+01', '2026-08-31 19:59:30.993369+01', '{FRANCAIS}'),
 	(2, 2, 'LICENCE_INFO', 'Licence en Informatique', 'Licence en Informatique', 3, 6, NULL, NULL, 'FLYER_LICENCE_INFO', true, '2026-08-30 13:15:39.565163+01', '2026-08-30 13:15:39.565163+01', '{FRANCAIS,ANGLAIS}'),
 	(3, 2, 'LICENCE_MECATRONIQUE_SI', 'Mécatronique & Systèmes Intelligents', 'Licence Nationale en Mécatronique & Systèmes Intelligents', 3, 6, NULL, NULL, 'FLYER_LICENCE_MECATRONIQUE', true, '2026-08-30 13:15:39.565163+01', '2026-08-30 13:15:39.565163+01', '{FRANCAIS,ANGLAIS}'),
@@ -1451,4 +1451,3 @@ ALTER TABLE ONLY public.tarif
 --
 -- PostgreSQL database dump complete
 --
-

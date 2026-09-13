@@ -316,6 +316,57 @@ async def test_scientific_bac_response_lists_licences_before_prepa(
 
 
 @pytest.mark.asyncio
+async def test_new_bac_is_not_invited_to_choose_specialisation_before_formation(
+    repository_factory,
+) -> None:
+    catalogue = _new_bac_catalogue(repository_factory)
+    catalogue.specialisations = repository_factory(
+        [
+            SimpleNamespace(
+                id=401,
+                formation_id=20,
+                code="LICENCE_INFO_DATA",
+                nom="Data et Intelligence Artificielle",
+                description="",
+                actif=True,
+            )
+        ]
+    )
+    service = RecommendationService(catalogue, AlwaysEligible())
+    subject = SubjectState(profile=AcademicProfile.NEW_BAC, bac_specialty="MATH")
+    decision = await service.recommend(subject)
+
+    answer = await StructuredResponseBuilder(catalogue).orientation(subject, decision)
+
+    assert answer is not None
+    assert "les spécialisations se comparent ensuite" in answer
+    assert "choisir la spécialisation la plus adaptée" not in answer
+
+
+@pytest.mark.asyncio
+async def test_technical_bac_orientation_prioritizes_mechatronics_without_listing_programme(
+    repository_factory,
+) -> None:
+    catalogue = _new_bac_catalogue(repository_factory)
+    service = RecommendationService(catalogue, AlwaysEligible())
+    subject = SubjectState(
+        profile=AcademicProfile.NEW_BAC,
+        bac_specialty="TECHNIQUE",
+    )
+    decision = await service.recommend(subject)
+
+    answer = await StructuredResponseBuilder(catalogue).orientation(subject, decision)
+
+    assert answer is not None
+    assert "Mécatronique & Systèmes Intelligents" in answer
+    assert "premier choix indicatif" in answer
+    assert answer.index("Mécatronique & Systèmes Intelligents") < answer.index(
+        "Licence en Informatique"
+    )
+    assert "matières et compétences" not in answer
+
+
+@pytest.mark.asyncio
 @pytest.mark.parametrize(
     "profile",
     [AcademicProfile.PREPA_HOLDER, AcademicProfile.LICENCE_HOLDER],

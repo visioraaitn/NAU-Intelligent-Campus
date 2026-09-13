@@ -20,8 +20,8 @@ class PromptComposer:
         response_mode: str,
     ) -> tuple[LLMMessage, LLMMessage]:
         facts = "\n".join(
-            f"- {fact.text} [source: {fact.source_ref or 'non documentée'}]"
-            for fact in academic_facts
+            f"- ID {index}: {fact.text} [source: {fact.source_ref or 'non documentée'}]"
+            for index, fact in enumerate(academic_facts)
         ) or "- Aucun fait académique récupéré pour cette portée."
         system_policy = prompt_text("final_answer").format(
             commercial_guidance=prompt_text("commercial_guidance"),

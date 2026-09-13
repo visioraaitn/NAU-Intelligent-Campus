@@ -16,7 +16,7 @@ ALLOWED_INTENTS = frozenset(
         "PAYMENT", "PREINSCRIPTION", "CONTACT", "ORIENTATION", "DETAILS",
         "DIFFICULTY", "PERSUASION", "PROFILE_RECALL",
         "PRACTICE", "PROJECTS", "INTERNSHIPS", "ALTERNANCE",
-        "REGISTRATION_DOCUMENTS", "LOCATION", "SCHEDULE", "OUT_OF_SCOPE", "GENERAL",
+        "REGISTRATION_DOCUMENTS", "LOCATION", "SCHEDULE", "ACADEMIC_INFO", "OUT_OF_SCOPE", "GENERAL",
     }
 )
 
@@ -57,11 +57,21 @@ class IntentDetector:
         if scope is ContextScope.ALL and not direct and self.context.is_elliptical_expansion(original_message):
             direct = list(previous or ("GENERAL",))
         elif scope is ContextScope.MORE:
-            direct = list(dict.fromkeys(("DETAILS", *(direct or previous or ("GENERAL",)))))
+            # A modifier inside a new question is not an elliptical follow-up.
+            standalone = fold_text(original_message) in {
+                fold_text(term) for term in self.context.terms.get("more", [])
+            }
+            direct = list(dict.fromkeys(("DETAILS", *(direct or (previous if standalone else ()) or ("GENERAL",)))))
         if dialogue_act in {
             DialogueAct.REQUEST_RECOMMENDATION,
             DialogueAct.REQUEST_ALTERNATIVE,
         } and "ORIENTATION" not in direct:
+            direct.insert(0, "ORIENTATION")
+        if (
+            "ORIENTATION" not in direct
+            and re.search(r"\b(?:bac|baccalaureat|njaht|naj7t)\b", text)
+            and re.search(r"\b(?:khedma|travail|emploi|metier|metiers|d[eé]bouch[eé]s?|carriere|carri[eè]res?)\b", text)
+        ):
             direct.insert(0, "ORIENTATION")
         if dialogue_act is DialogueAct.EXPRESS_DIFFICULTY and "DIFFICULTY" not in direct:
             direct.append("DIFFICULTY")

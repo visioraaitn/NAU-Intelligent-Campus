@@ -30,6 +30,9 @@ class ProfileResolver:
                 subject.pending_action = None
                 subject.recommended_offer = None
                 subject.recommended_specialisation = None
+                subject.current_offer = None
+                subject.current_specialisation = None
+                subject.topic_initialized = True
                 subject.offer_intro_done = False
                 if facts.profile not in {AcademicProfile.LICENCE_STUDENT, AcademicProfile.LICENCE_HOLDER}:
                     subject.licence_specialty = None

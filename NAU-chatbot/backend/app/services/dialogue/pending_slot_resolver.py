@@ -25,7 +25,8 @@ class PendingSlotResolver:
             for value in pattern_file("profiles").patterns["pending_bac_level"]
         ]
 
-    def resolve(self, message: str, state: SubjectState, *, provided_fields: set[str] | None = None) -> PendingSlotResult:
+    def resolve(self, message: str, state: SubjectState, *, provided_fields: set[str] | None = None,
+                allow_free_text: bool = True) -> PendingSlotResult:
         folded = fold_text(message).strip()
         if state.pending_action:
             action = state.pending_action
@@ -39,18 +40,26 @@ class PendingSlotResolver:
         slot = state.pending_slot
         if not slot:
             return PendingSlotResult()
+        if not allow_free_text and not provided_fields:
+            return PendingSlotResult()
         # These qualification slots belong to orientation, even if a factual
         # question or registration request intervened before the answer.
         previous = ("ORIENTATION",) if slot in {"PROFILE", "BAC_SPECIALTY", "LICENCE_SPECIALTY", "INTEREST"} else tuple(state.last_intents)
         parsed_slots = {
-            "PROFILE": state.profile is not AcademicProfile.UNKNOWN,
-            "BAC_SPECIALTY": bool(state.bac_specialty),
+            "PROFILE": state.profile is not AcademicProfile.UNKNOWN and (provided_fields is None or 'profile' in provided_fields),
+            "BAC_SPECIALTY": bool(state.bac_specialty) and (provided_fields is None or 'bac_specialty' in provided_fields),
             "LICENCE_SPECIALTY": bool(state.licence_specialty) and (provided_fields is None or 'licence_specialty' in provided_fields),
-            "INTEREST": bool(state.interests),
+            "INTEREST": bool(state.interests) and (provided_fields is None or 'interests' in provided_fields),
         }
         if parsed_slots.get(slot, False):
             state.pending_slot = None
             return PendingSlotResult(True, previous)
+        if not allow_free_text:
+            return PendingSlotResult()
+        # An unanswered qualification question must not consume a new request
+        # as a diploma title, even when none of its keywords is recognized.
+        if len(folded.split()) > 6 or re.search(r"\b(?:quel\w*|comment|pourquoi|combien|ou|chnowa|chnoua|win)\b", folded):
+            return PendingSlotResult()
         if slot == "BAC_SPECIALTY":
             aliases = (
                 ("MATH", ("math", "maths", "mathematiques", "رياضيات")),
