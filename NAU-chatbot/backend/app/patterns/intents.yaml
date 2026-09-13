@@ -6,7 +6,7 @@ patterns:
   - ^licences?$
   - \b(?:lprogramme|programme)\s+(?:mte3|mtaa|de)\s+(?:l\s+)?iit\b
   FEES:
-  - \b(frais|prix|cout|coût|tarif|mensualit[eé]|b9adech|b9addeh|b9adeh|9adech|9addech|9adeh|9addeh|par an|fel 3am|annuel)\b
+  - \b(frais|prix|cout|coût|tarif|mensualit[eé]|b9adech|b9addeh|b9adeh|9adech|9addech|9adeh|9addeh|7a9|par an|fel 3am|3am bark|annuel)\b
   - \b(?:tarifs|mensualites|nedfa3|ndfa3)\b
   - \b(?:total|totalite|kamel|kol)\b.{0,32}\b(?:frais|prix|cout|tarif|ans?|annees?|snin|snen)\b
   DURATION:
@@ -60,7 +60,7 @@ patterns:
   OUT_OF_SCOPE:
   - \b(?:m[eé]t[eé]o|weather|ta9s|taks|jaw|chna7wel|chnaoua\s+el\s+jaw|chnoua?\s+ta9s|chnoua?\s+el\s+jaw|football|match|real(?:\s+madrid)?|barca|koura|wa9teh\s+(?:tkawar|yel3eb)|recette|cuisine|couscous|mekla|cin[eé]ma|musique)\b
   - \b(?:3addili|3adili|3addli|ta3dili|taadili)\s+[a-zà-ÿ]{2,}(?:\s+(?:bellehi|s'il\s+te\s+plait))?\b
-  - \b(?:3am|am|oncle|tonton)\s+[a-zà-ÿ]{3,}(?:\s+(?:mawjoud|present|présent|là))?\b
+  - \b(?:3am|am|oncle|tonton)\s+(?!bark\b)[a-zà-ÿ]{3,}(?:\s+(?:mawjoud|present|présent|là))?\b
   PRACTICE:
   - \b(?:pratiques?|tp|travaux\s+pratiques|laboratoires?|labs?|apprentissage\s+pratique|hands\s+on)\b
   PROJECTS:
