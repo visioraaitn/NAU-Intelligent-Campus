@@ -468,6 +468,27 @@ async def test_new_bac_business_priority_is_stable(
 
 
 @pytest.mark.asyncio
+async def test_technical_bac_info_interest_moves_informatics_ahead_of_mechatronics(
+    repository_factory,
+) -> None:
+    service = RecommendationService(
+        _new_bac_catalogue(repository_factory),
+        AlwaysEligible(),
+    )
+
+    decision = await service.recommend(
+        SubjectState(
+            profile=AcademicProfile.NEW_BAC,
+            bac_specialty="TECHNIQUE",
+            interests=["GENERAL_INFO"],
+        )
+    )
+
+    assert decision.primary is not None
+    assert decision.primary.formation_code == "LICENCE_INFO"
+
+
+@pytest.mark.asyncio
 async def test_recommendation_ranks_data_ai_and_excludes_rejected_offer(
     repository_factory,
 ) -> None:

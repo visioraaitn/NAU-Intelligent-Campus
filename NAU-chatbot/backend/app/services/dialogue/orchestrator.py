@@ -639,6 +639,7 @@ class ChatOrchestrator:
                         or "CATALOG" in requested_structured
                     ),
                     licence_only=all_licences,
+                    total_years=self._requested_fee_years(message, target),
                 ))
             if "ACCREDITATION" in requested_structured:
                 blocks.append(await self.structured.accreditation(target, message))
@@ -654,7 +655,12 @@ class ChatOrchestrator:
                     pre_registration_completed=subject.pre_registration_completed,
                 ))
             if "PAYMENT" in intents and "FEES" not in intents:
-                blocks.append(await self.structured.fees(target))
+                blocks.append(
+                    await self.structured.fees(
+                        target,
+                        total_years=self._requested_fee_years(message, target),
+                    )
+                )
             if "ALTERNANCE" in intents:
                 blocks.append(await self.structured.alternance(target))
             if target is not None and target_specific_intents.difference({"ADMISSION"}).intersection(intents):
@@ -684,6 +690,7 @@ class ChatOrchestrator:
                 target,
                 include_all=facts.scope is ContextScope.ALL or all_licences,
                 licence_only=all_licences,
+                total_years=self._requested_fee_years(message, target),
             )
         elif "REGISTRATION_DOCUMENTS" in intents:
             structured_answer = await self.structured.registration_documents(
@@ -703,7 +710,10 @@ class ChatOrchestrator:
         elif "ALTERNANCE" in intents:
             structured_answer = await self.structured.alternance(target)
         elif "PAYMENT" in intents:
-            structured_answer = await self.structured.fees(target)
+            structured_answer = await self.structured.fees(
+                target,
+                total_years=self._requested_fee_years(message, target),
+            )
         elif "ADMISSION" in intents and target is not None:
             structured_answer = await self.structured.admission(target, subject, eligibility)
         elif "ORIENTATION" in intents and recommendation is not None:
@@ -1107,6 +1117,37 @@ class ChatOrchestrator:
         if spec is not None and spec.formation_id != formation.id:
             spec = None
         return AcademicTarget(formation, spec)
+
+    @staticmethod
+    def _requested_fee_years(
+        message: str,
+        target: AcademicTarget | None,
+    ) -> int | None:
+        text = fold_text(message)
+        if not re.search(
+            r"\b(?:total|totalite|kamel|kol|9adech|9addech|9olli|9oul|combien)\b"
+            r"|(?:nedfa3|payer|paie)\b",
+            text,
+        ):
+            return None
+        number_words = {
+            "deux": 2,
+            "trois": 3,
+            "quatre": 4,
+            "cinq": 5,
+            "six": 6,
+        }
+        explicit = re.search(
+            r"\b([2-9]|1[0-2])\s*(?:ans?|annees?|snin|snen)\b",
+            text,
+        )
+        if explicit:
+            return int(explicit.group(1))
+        for word, years in number_words.items():
+            if re.search(rf"\b{word}\s+(?:ans?|annees?|snin|snen)\b", text):
+                return years
+        duration = getattr(target.formation, "duree_annees", None) if target else None
+        return duration if isinstance(duration, int) and duration > 1 else None
 
     @staticmethod
     def _asks_all_licence_tariffs(message: str) -> bool:

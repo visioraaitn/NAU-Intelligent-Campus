@@ -8,6 +8,7 @@ patterns:
   FEES:
   - \b(frais|prix|cout|coût|tarif|mensualit[eé]|b9adech|b9addeh|b9adeh|9adech|9addech|9adeh|9addeh|par an|fel 3am|annuel)\b
   - \b(?:tarifs|mensualites|nedfa3|ndfa3)\b
+  - \b(?:total|totalite|kamel|kol)\b.{0,32}\b(?:frais|prix|cout|tarif|ans?|annees?|snin|snen)\b
   DURATION:
   - \b(dur[eé]e|combien d annees|9addech snin)\b
   PROGRAMME:

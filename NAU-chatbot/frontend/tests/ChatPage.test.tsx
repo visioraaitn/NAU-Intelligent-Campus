@@ -171,13 +171,14 @@ describe("ChatPage", () => {
     expect(screen.queryByText("alert(1)", { selector: "script" })).not.toBeInTheDocument();
   });
 
-  it("returns the cursor to the message input when the answer is ready", async () => {
+  it("does not steal focus from the message input when the assistant responds", async () => {
     const user = userEvent.setup();
+    const focusSpy = vi.spyOn(HTMLElement.prototype, "focus");
     const view = renderPage();
 
     const input = screen.getByLabelText("Votre message");
     await user.type(input, "Bonjour");
-    await user.click(screen.getByRole("button", { name: "Envoyer le message" }));
+    focusSpy.mockClear();
 
     chatState = {
       messages: [
@@ -200,7 +201,8 @@ describe("ChatPage", () => {
       </MemoryRouter>,
     );
 
-    await waitFor(() => expect(view.container.querySelector("#chat-message")).toHaveFocus());
+    expect(view.container.querySelector("#chat-message")).not.toBeNull();
+    expect(focusSpy).not.toHaveBeenCalled();
   });
 
   it("keeps multiline input behavior", async () => {

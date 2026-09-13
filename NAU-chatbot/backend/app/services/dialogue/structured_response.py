@@ -51,6 +51,46 @@ class StructuredResponseBuilder:
         ).items
         parcours_names = {item.id: item.nom for item in parcours}
         text = fold_text(message)
+        asks_languages = bool(
+            re.search(
+                r"\b(?:langue|langues|francais|français|anglais|english)\b",
+                text,
+            )
+        )
+        if asks_languages:
+            requested_cycles: set[str] = set()
+            if re.search(r"\blicences?\b", text):
+                requested_cycles.add("LICENCE")
+            if re.search(r"\b(?:ingenieur|ingénieur|cycle ingenieur|cycle ingénieur)\b", text):
+                requested_cycles.add("INGENIEUR")
+            parcours_ids = {
+                item.id for item in parcours if item.code in requested_cycles
+            }
+            language_lines: list[str] = []
+            for formation in formations:
+                parcours_name = parcours_names.get(formation.parcours_id, "")
+                if requested_cycles and formation.parcours_id not in parcours_ids:
+                    continue
+                languages = getattr(formation, "langues_enseignement", None) or []
+                if languages:
+                    language_lines.append(
+                        f"• {formation.nom} ({parcours_name}) : "
+                        + ", ".join(_language_label(language) for language in languages)
+                        + "."
+                    )
+            if language_lines:
+                cycle_label = (
+                    " pour les cycles demandés"
+                    if requested_cycles
+                    else ""
+                )
+                return (
+                    "Les langues d'enseignement enregistrées dans la base académique"
+                    f"{cycle_label} sont :\n"
+                    + "\n".join(language_lines)
+                    + "\n\nLes modalités peuvent varier selon le module ; confirme-les dans le catalogue officiel : "
+                    "https://iit.tn/formation/"
+                )
         asks_informatics = any(
             contains_phrase(text, term)
             for term in ("informatique", "info", "numerique", "numérique")
@@ -86,6 +126,13 @@ class StructuredResponseBuilder:
                 f"• {parcours_names.get(formation.parcours_id, 'Parcours')} — "
                 f"{formation.nom}{duration}"
             )
+            languages = getattr(formation, "langues_enseignement", None)
+            if languages:
+                lines.append(
+                    "  Langues d'enseignement : "
+                    + ", ".join(_language_label(language) for language in languages)
+                    + "."
+                )
             if specs:
                 lines.append(
                     "  Spécialisations : " + ", ".join(item.nom for item in specs)
@@ -215,6 +262,7 @@ class StructuredResponseBuilder:
         *,
         include_all: bool = False,
         licence_only: bool = False,
+        total_years: int | None = None,
     ) -> str:
         if target is not None:
             formations = [target.formation]
@@ -286,13 +334,18 @@ class StructuredResponseBuilder:
                     f"{tariff.nb_mensualites} mensualités de "
                     f"{_money(tariff.mensualite)} {tariff.devise}"
                 )
-            total = _annual_total(
-                tariff.frais_inscription,
-                tariff.mensualite,
-                tariff.nb_mensualites,
-            )
-            if total is not None:
-                parts.append(f"total indicatif {_money(total)} {tariff.devise}")
+            if total_years:
+                annual_total = _annual_total(
+                    tariff.frais_inscription,
+                    tariff.mensualite,
+                    tariff.nb_mensualites,
+                )
+                if annual_total is not None:
+                    total = annual_total * total_years
+                    parts.append(
+                        f"total indicatif pour {total_years} ans "
+                        f"{_money(total)} {tariff.devise}"
+                    )
             qualifiers = []
             language = getattr(tariff, "langue_enseignement", None)
             if language:
@@ -303,6 +356,12 @@ class StructuredResponseBuilder:
             context = f" ({' · '.join(qualifiers)})" if qualifiers else ""
             amount = " + ".join(parts) if parts else "montant à confirmer"
             lines.append(f"• {formation.nom}{context} : {amount}.")
+        if total_years:
+            lines.append(
+                "Ce total est une projection indicative du tarif annuel actuel sur "
+                f"{total_years} ans ; les tarifs et les modalités doivent être reconfirmés "
+                "pour chaque année universitaire."
+            )
         lines.append(
             "Paiement comptant : pour tous les parcours, un paiement au comptant donne une réduction de 5% sur le total des frais. "
             "Les montants doivent être reconfirmés pour l'année universitaire visée."
@@ -354,14 +413,40 @@ class StructuredResponseBuilder:
                 lines.append(
                     f"Puisque tu souhaites suivre une Prépa, ton bac {bac} te permet d'envisager le {formation.nom}."
                 )
+            elif subject.bac_specialty in {"MATH", "SCIENCES"}:
+                lines.append(
+                    f"Avec ton bac {bac}, je te recommande d'abord les licences IIT admissibles. "
+                    f"Une piste à explorer est {formation.nom}."
+                )
             else:
                 lines.append(
-                    f"Avec ton bac {bac}, je te recommande d'abord les licences IIT admissibles. Une première piste à explorer est {formation.nom}."
+                    f"Avec ton bac {bac}, {formation.nom} est une piste compatible à explorer."
                 )
             lines.append(
                 "Si les conditions de la Prépa correspondent à ton bac, c'est aussi une voie possible vers le cycle ingénieur; "
                 "je peux comparer les deux parcours selon ton objectif."
             )
+            if (
+                subject.bac_specialty == "TECHNIQUE"
+                and subject.interests
+                and (
+                    "GENERAL_INFO" in subject.interests
+                    or any(
+                        interest in {"DATA_AI", "SOFTWARE", "CYBER_NETWORKS"}
+                        for interest in subject.interests
+                    )
+                )
+            ):
+                lines.append(
+                    "Ton intérêt pour l'informatique rend cette piste particulièrement cohérente; "
+                    "la Mécatronique reste aussi un choix possible si tu préfères les systèmes, "
+                    "l'électronique ou la robotique."
+                )
+            elif subject.bac_specialty == "TECHNIQUE":
+                lines.append(
+                    "Avec un bac technique, l'informatique et la Mécatronique sont deux choix possibles; "
+                    "je ne classe pas définitivement l'un devant l'autre sans connaître ton projet."
+                )
         elif (
             subject.profile is AcademicProfile.LICENCE_STUDENT
             and (
@@ -808,6 +893,12 @@ class StructuredResponseBuilder:
             lines.append(introduction + ".\n")
         if overview and formation.code == "PREPA_GENERAL":
             lines.append("Ce parcours prépare la poursuite vers un cycle ingénieur ; il ne délivre pas lui-même un diplôme d'ingénieur.\n")
+        if overview and getattr(formation, "langues_enseignement", None):
+            languages = ", ".join(
+                _language_label(language)
+                for language in formation.langues_enseignement
+            )
+            lines.append(f"Langues d'enseignement : {languages}.\n")
 
         if "DURATION" in intents:
             if formation.duree_annees:

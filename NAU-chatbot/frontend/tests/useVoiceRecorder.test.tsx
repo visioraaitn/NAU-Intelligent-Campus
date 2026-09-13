@@ -45,6 +45,18 @@ describe("voice input", () => {
     expect(stop).toHaveBeenCalled();
   });
 
+  it("ignores useless short transcription results", async () => {
+    const { stop } = setup();
+    vi.spyOn(speechApi, "transcribeAudio").mockResolvedValue({ text: "w" });
+    const received = vi.fn();
+    const { result } = renderHook(() => useVoiceRecorder(received));
+    await act(async () => result.current.toggleRecording());
+    await act(async () => result.current.toggleRecording());
+    await waitFor(() => expect(result.current.status).toBe("idle"));
+    expect(received).not.toHaveBeenCalled();
+    expect(stop).toHaveBeenCalled();
+  });
+
   it("shows service unavailability and permits another recording", async () => {
     setup();
     vi.spyOn(speechApi, "transcribeAudio").mockRejectedValue(new ApiError("Unavailable", 503));

@@ -118,7 +118,21 @@ async def test_all_fees_are_rendered_directly_from_structured_tariff_data(
     assert result.intents == ("FEES",)
     assert "Cycle Préparatoire" in result.answer
     assert "556 TND" in result.answer
-    assert "5 804 TND" in result.answer
+    assert "total indicatif" not in result.answer
+    assert rag.plans == []
+
+
+async def test_requested_multi_year_total_is_calculated_from_structured_tariff_data(
+    repository_factory,
+) -> None:
+    orchestrator, rag = _orchestrator(repository_factory)
+
+    result = await orchestrator.process(
+        "donne-moi le total de la prépa sur 2 ans",
+        ConversationState.new(uuid4()),
+    )
+
+    assert "total indicatif pour 2 ans 11 608 TND" in result.answer
     assert rag.plans == []
 
 

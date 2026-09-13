@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 import httpx
 
 from app.core.config import Settings
@@ -43,9 +45,12 @@ class HttpSpeechClient:
             response.raise_for_status()
             result = response.json()
             text = result.get("text") if isinstance(result, dict) else None
-            if not isinstance(text, str) or not text.strip():
+            if not isinstance(text, str):
                 raise ValueError("empty speech transcription")
-            return text.strip()
+            cleaned = re.sub(r"\s+", " ", text).strip()
+            if len(cleaned) < 3 or not re.search(r"\w", cleaned):
+                raise ValueError("empty speech transcription")
+            return cleaned
         except AppError:
             raise
         except (httpx.HTTPError, ValueError) as exc:

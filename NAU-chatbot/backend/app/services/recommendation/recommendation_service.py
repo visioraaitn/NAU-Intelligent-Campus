@@ -223,6 +223,15 @@ class RecommendationService:
         if subject.profile is not AcademicProfile.NEW_BAC:
             return 0
         if subject.bac_specialty == "TECHNIQUE":
+            if "GENERAL_INFO" in subject.interests or any(
+                interest in {"DATA_AI", "SOFTWARE", "CYBER_NETWORKS"}
+                for interest in subject.interests
+            ):
+                order = {
+                    "LICENCE_INFO": 0,
+                    "LICENCE_MECATRONIQUE_SI": 1,
+                }
+                return order.get(formation_code, 2)
             order = {
                 "LICENCE_MECATRONIQUE_SI": 0,
                 "LICENCE_INFO": 1,

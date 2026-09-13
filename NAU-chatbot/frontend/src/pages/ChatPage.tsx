@@ -34,22 +34,23 @@ export function ChatPage() {
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
-  const previousMessageCount = useRef(messages.length);
-  const appendTranscription = useCallback((text: string) => {
-    const transcription = text.trim();
-    if (!transcription) return;
-    setInput((current) => current.trim() ? `${current.trimEnd()} ${transcription}` : transcription);
-    requestAnimationFrame(() => textareaRef.current?.focus());
+  const isMeaningfulTranscription = useCallback((text: string) => {
+    const transcription = text.replace(/\s+/g, " ").trim();
+    return transcription.length >= 3 && /[\p{L}\p{N}]/u.test(transcription);
   }, []);
+  const appendTranscription = useCallback((text: string) => {
+    const transcription = text.replace(/\s+/g, " ").trim();
+    if (!transcription || !isMeaningfulTranscription(transcription)) return;
+    setInput((current) => {
+      const currentValue = current.trim();
+      return currentValue ? `${currentValue} ${transcription}` : transcription;
+    });
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, [isMeaningfulTranscription]);
   const voice = useVoiceRecorder(appendTranscription);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ block: "end", behavior: "smooth" });
-    const newest = messages[messages.length - 1];
-    if (messages.length > previousMessageCount.current && newest?.role === "assistant") {
-      requestAnimationFrame(() => textareaRef.current?.focus());
-    }
-    previousMessageCount.current = messages.length;
   }, [messages]);
 
   useEffect(() => {

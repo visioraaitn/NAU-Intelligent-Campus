@@ -396,6 +396,42 @@ async def test_fees_deduplicate_identical_rows_and_keep_languages(
 
 
 @pytest.mark.asyncio
+async def test_fees_only_project_multi_year_total_when_requested(
+    repository_factory,
+) -> None:
+    common = {
+        "formation_id": 20,
+        "specialisation_id": None,
+        "frais_inscription": 800,
+        "mensualite": 600,
+        "nb_mensualites": 10,
+        "devise": "TND",
+        "actif": True,
+    }
+    formation = _formation()
+    catalogue = _catalogue(
+        repository_factory,
+        tariffs=[SimpleNamespace(id=1, langue_enseignement="FRANCAIS", **common)],
+    )
+    builder = StructuredResponseBuilder(catalogue)
+
+    annual = await builder.fees(AcademicTarget(formation))
+    total = await builder.fees(AcademicTarget(formation), total_years=3)
+
+    assert "total indicatif" not in annual
+    assert "total indicatif pour 3 ans 20 400 TND" in total
+
+
+def test_fee_year_parser_understands_french_and_tunisian_requests() -> None:
+    target = AcademicTarget(SimpleNamespace(duree_annees=3))
+
+    assert ChatOrchestrator._requested_fee_years("donne le total sur 3 ans", target) == 3
+    assert ChatOrchestrator._requested_fee_years(
+        "9olli 9adeh nedfa3 fi 3 snin", target
+    ) == 3
+
+
+@pytest.mark.asyncio
 async def test_fees_without_target_ask_for_the_formation(repository_factory) -> None:
     answer = await StructuredResponseBuilder(_catalogue(repository_factory)).fees(None)
 

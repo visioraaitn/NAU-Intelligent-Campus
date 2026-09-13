@@ -70,6 +70,11 @@ def test_seed_assigns_the_requested_teaching_languages(seed) -> None:
         "LICENCE_INFO",
         "LICENCE_ELEC_SEIER",
         "LICENCE_MECATRONIQUE_SI",
+        "INGENIEUR_INFO",
+        "INGENIEUR_CIVIL",
+        "INGENIEUR_INDUSTRIEL",
+        "INGENIEUR_MECANIQUE",
+        "INGENIEUR_PROCEDES",
     }
 
     for code, formation in formations.items():

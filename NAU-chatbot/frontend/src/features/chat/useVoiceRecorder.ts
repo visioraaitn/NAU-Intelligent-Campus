@@ -18,6 +18,11 @@ function recorderOptions(): MediaRecorderOptions | undefined {
   return mimeType ? { mimeType } : undefined;
 }
 
+const isMeaningfulTranscription = (text: string) => {
+  const transcription = text.replace(/\s+/g, " ").trim();
+  return transcription.length >= 3 && /[\p{L}\p{N}]/u.test(transcription);
+};
+
 export function useVoiceRecorder(onTranscription: (text: string) => void) {
   const [status, setStatus] = useState<VoiceInputStatus>("idle");
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +57,13 @@ export function useVoiceRecorder(onTranscription: (text: string) => void) {
     try {
       const response = await speechApi.transcribeAudio(audio);
       if (!mountedRef.current) return;
-      onTranscriptionRef.current(response.text);
+      const transcription = response.text.replace(/\s+/g, " ").trim();
+      if (!isMeaningfulTranscription(transcription)) {
+        setError(null);
+        setStatus("idle");
+        return;
+      }
+      onTranscriptionRef.current(transcription);
       setError(null);
       setStatus("idle");
     } catch (cause) {
