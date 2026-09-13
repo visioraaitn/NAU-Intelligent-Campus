@@ -420,6 +420,18 @@ class ChatOrchestrator:
             intents = list(pending.forced_intents)
         if "CATALOG" in intents and re.search(r"\b(?:pour moi|que je|ne[jg]+em|na[jg]+em)\b", fold_text(message)):
             intents = ["ORIENTATION" if intent == "CATALOG" else intent for intent in intents]
+        if (
+            facts.profile
+            and "CATALOG" in intents
+            and re.search(
+                r"\b(?:conseillez?|conseilles?|recommande(?:z|r)?|"
+                r"meilleur(?:e|s)?|compatible|adapte(?:e|s)?)\b",
+                fold_text(message),
+            )
+        ):
+            # A personal recommendation must use eligibility and profile
+            # scoring, not the unrestricted catalogue overview.
+            intents = ["ORIENTATION" if intent == "CATALOG" else intent for intent in intents]
         if facts.profile and intents == ["GENERAL"]:
             intents = ["ORIENTATION"]
         if facts.target and intents == ["GENERAL"]:
