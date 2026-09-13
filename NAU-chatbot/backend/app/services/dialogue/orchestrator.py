@@ -981,15 +981,29 @@ class ChatOrchestrator:
         source_seen = any(source in item.content for item in state.history if item.role == "assistant")
         source_requested = bool({"lien", "source", "sources", "site", "page"}.intersection(fold_text(message).split()))
         return await self.structured.formation_details(
-            target, intents, include_all=include_all, continuing=continuing,
+            target, intents, continuing=continuing,
             show_source=source_requested or not continuing or not source_seen,
-            show_specialisations=not continuing or self._asks_specialisation_list(message),
+            include_all=include_all or self._asks_all_subjects(message),
+            show_specialisations=(
+                not continuing or self._asks_specialisation_list(message)
+            ) and not self._asks_all_subjects(message),
         )
 
     @staticmethod
     def _asks_all_paths(message: str) -> bool:
         text = fold_text(message)
         return bool(re.search(r"\b(?:tous|toutes|tout|kol|koll)\b", text) and re.search(r"\b(?:parcours|formations|voies|filieres)\b", text))
+
+    @staticmethod
+    def _asks_all_subjects(message: str) -> bool:
+        text = fold_text(message)
+        return bool(
+            re.search(r"\b(?:tout|toutes?|tous|kol|koll|complete|complet|entier)\b", text)
+            and re.search(
+                r"\b(?:mati[eè]res?|modules?|cours|contenu|programme|mawad)\b",
+                text,
+            )
+        )
 
     async def _all_eligible_paths(self, subject: SubjectState) -> str:
         from app.repositories.academic import PageRequest
@@ -1124,12 +1138,15 @@ class ChatOrchestrator:
         target: AcademicTarget | None,
     ) -> int | None:
         text = fold_text(message)
-        if not re.search(
-            r"\b(?:total|totalite|kamel|kol|9adech|9addech|9olli|9oul|combien)\b"
-            r"|(?:nedfa3|payer|paie)\b",
-            text,
-        ):
-            return None
+        asks_amount = bool(
+            re.search(
+                r"\b(?:total|totalite|kamel|kol|9adech|9addech|9olli|9oul|combien)\b",
+                text,
+            )
+        )
+        asks_explicit_total = bool(
+            re.search(r"\b(?:total|totalite|kamel|kol)\b", text)
+        )
         number_words = {
             "deux": 2,
             "trois": 3,
@@ -1142,10 +1159,12 @@ class ChatOrchestrator:
             text,
         )
         if explicit:
-            return int(explicit.group(1))
+            return int(explicit.group(1)) if asks_amount else None
         for word, years in number_words.items():
-            if re.search(rf"\b{word}\s+(?:ans?|annees?|snin|snen)\b", text):
+            if asks_amount and re.search(rf"\b{word}\s+(?:ans?|annees?|snin|snen)\b", text):
                 return years
+        if not asks_explicit_total:
+            return None
         duration = getattr(target.formation, "duree_annees", None) if target else None
         return duration if isinstance(duration, int) and duration > 1 else None
 

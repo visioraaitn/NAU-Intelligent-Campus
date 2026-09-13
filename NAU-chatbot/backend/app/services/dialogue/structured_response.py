@@ -367,6 +367,11 @@ class StructuredResponseBuilder:
             "Les montants doivent être reconfirmés pour l'année universitaire visée."
         )
         lines.append(
+            "Pour choisir une autre modalité (mensualités, paiement échelonné ou situation particulière), "
+            "contacte directement le service financier ou l'administration IIT afin de discuter de ton dossier : "
+            "(+216) 74 46 50 20 ou info@iit.tn. Ils pourront confirmer les modalités réellement disponibles."
+        )
+        lines.append(
             "Veux-tu que je t'aide à préparer une pré-inscription ?"
         )
         return "\n".join(lines)

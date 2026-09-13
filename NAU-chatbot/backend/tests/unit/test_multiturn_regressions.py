@@ -419,6 +419,8 @@ async def test_fees_only_project_multi_year_total_when_requested(
     total = await builder.fees(AcademicTarget(formation), total_years=3)
 
     assert "total indicatif" not in annual
+    assert "service financier" in annual
+    assert "info@iit.tn" in annual
     assert "total indicatif pour 3 ans 20 400 TND" in total
 
 
@@ -429,6 +431,10 @@ def test_fee_year_parser_understands_french_and_tunisian_requests() -> None:
     assert ChatOrchestrator._requested_fee_years(
         "9olli 9adeh nedfa3 fi 3 snin", target
     ) == 3
+    assert ChatOrchestrator._requested_fee_years(
+        "je veux discuter avec le service financier pour choisir comment payer",
+        target,
+    ) is None
 
 
 @pytest.mark.asyncio
